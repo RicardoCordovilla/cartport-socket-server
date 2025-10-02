@@ -1,0 +1,26 @@
+{
+  "name": "socket-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/server.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.6.1",
+    "@types/socket.io": "^3.0.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10",
+    "socket.io": "^4.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
