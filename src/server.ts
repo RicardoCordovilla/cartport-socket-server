@@ -1,7 +1,7 @@
 import http from "http";
 import express from "express";
 import cors from "cors";
-import { Server } from "socket.io";
+import { WebSocketServer} from "ws";
 import { initializeSocketService } from "./socket.service";
 
 const app = express();
@@ -14,17 +14,12 @@ app.use(
 app.use(express.json());
 
 const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
+const wss = new WebSocketServer({ server: httpServer });
 
 const PORT = 3000;
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  initializeSocketService(io);
+  initializeSocketService(wss);
   console.log("🔌 Socket service initialized");
 });
