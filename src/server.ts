@@ -18,8 +18,8 @@ const wss = new WebSocketServer({ server: httpServer });
 
 const PORT = 3000;
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
   initializeSocketService(wss);
   console.log("🔌 Socket service initialized");
 });
