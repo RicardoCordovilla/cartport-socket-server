@@ -79,14 +79,4 @@ export function initializeSocketService(wss: WebSocketServer) {
       console.error("❌ WebSocket error para cliente", ws.id, ":", error);
     });
   });
-
-  // Optional: Broadcast server status periodically
-  setInterval(() => {
-    broadcastJSON({
-      from: "server",
-      type: "heartbeat",
-      timestamp: Date.now(),
-      clients: wss.clients.size,
-    });
-  }, 30000);
 }
