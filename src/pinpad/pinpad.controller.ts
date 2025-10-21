@@ -1,3 +1,4 @@
+import { PINPAD_CONFIG } from "./pinpad.config";
 import { calculateSecurityComponent } from "./utils/funtions";
 
 /**
@@ -25,8 +26,8 @@ export function buildConfigFrame(
   const filler3 = "".padEnd(15, " ");
   const filler4 = "".padEnd(6, " ");
 
-  // Puerto de escucha (default 9999)
-  const listenPort = "009999";
+  const listenPort = PINPAD_CONFIG.port.toString().padStart(6, "0");
+
 
   const frame =
     tipo +
