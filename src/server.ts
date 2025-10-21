@@ -1,26 +1,12 @@
-import http from "http";
-import express from "express";
-import cors from "cors";
-import { WebSocketServer} from "ws";
-import { initializeSocketService } from "./socket.service";
+import * as dotenv from "dotenv";
+dotenv.config();
 
-const app = express();
-app.use(
-  cors({
-    // origin: ["http://localhost:5173", "http://192.168.100.191:5173"],
-    origin: "*"
-  })
-);
-app.use(express.json());
+import app from "./app";
 
-const httpServer = http.createServer(app);
-const wss = new WebSocketServer({ server: httpServer });
+const PORT = process.env.PORT || 3000;
 
-const PORT = 3010;
-
-// httpServer.listen(PORT, '0.0.0.0', () => {
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  initializeSocketService(wss);
-  console.log("🔌 Socket service initialized");
-});
+export const startServer = () => {
+  return app.listen(PORT, () => {
+    console.log(`🚀 API corriendo en http://localhost:${PORT}`);
+  });
+};
