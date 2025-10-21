@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { requestPayment } from "./pinpad.service";
+import { processReverse, requestPayment } from "./pinpad.service";
 
 const router = Router();
 
 router.post("/payment", requestPayment);
+router.post("/reverse-payment", processReverse);
 
 export default router;

@@ -1,5 +1,10 @@
 import { PINPAD_CONFIG } from "./pinpad.config";
-import { calculateSecurityComponent } from "./utils/funtions";
+import { buildReverseFrame } from "./pinpad.helper";
+import {
+  calculateSecurityComponent,
+  parsePaymentResponse,
+  sendToPinPad,
+} from "./utils/funtions";
 
 /**
  * Construye la trama de configuración del PinPad con componente de seguridad
@@ -27,7 +32,6 @@ export function buildConfigFrame(
   const filler4 = "".padEnd(6, " ");
 
   const listenPort = PINPAD_CONFIG.port.toString().padStart(6, "0");
-
 
   const frame =
     tipo +
@@ -309,3 +313,72 @@ export function buildPaymentFrame(params: {
 
   return lengthHex + frameWithSecurity;
 }
+
+export const executeReverse = async (params: {
+  tipoReverso: "03" | "04";
+  secuencialOriginal: string;
+  numeroAutorizacion: string;
+  monto: number;
+  montoBaseIva: number;
+  montoBaseNoIva: number;
+  iva: number;
+  mid: string;
+  tid: string;
+  cid: string;
+  fechaOriginal: string;
+  horaOriginal: string;
+  numeroFactura?: string;
+}): Promise<any> => {
+  const frame = buildReverseFrame(params);
+
+  const { response } = await executePinpadOperation(
+    params.tipoReverso === "03" ? "PP-ANULACION" : "PP-REVERSO",
+    frame,
+    {
+      amount: params.monto,
+      merchantId: params.mid,
+      terminalId: params.tid,
+      cajaId: params.cid,
+      invoiceNumber: params.numeroFactura,
+    }
+  );
+
+  // Parsear respuesta completa
+  const parsedResponse = parsePaymentResponse(response);
+
+  return parsedResponse;
+};
+
+export interface PinpadOperationMetadata {
+  amount?: number;
+  merchantId?: string;
+  terminalId?: string;
+  cajaId?: string;
+  invoiceNumber?: string;
+}
+
+export const executePinpadOperation = async (
+  operationType: string,
+  frame: string,
+  metadata?: PinpadOperationMetadata
+): Promise<{ response: string }> => {
+  const startTime = Date.now();
+
+  try {
+    // 2. Enviar trama al PinPad
+    const response = await sendToPinPad(frame);
+    const responseTime = Date.now() - startTime;
+
+    // 3. Parsear respuesta básica
+    const frameData = response.substring(4);
+    const codigoRespuesta = frameData.substring(2, 4);
+    const mensajeRespuesta = frameData.substring(8, 28).trim();
+    const success = codigoRespuesta === "00";
+
+    return { response };
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+
+    throw error;
+  }
+};
