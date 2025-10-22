@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { PINPAD_CONFIG } from "./pinpad.config";
 import { buildPaymentFrame, executeReverse } from "./pinpad.controller";
-import { parsePaymentResponse, sendToPinPad } from "./utils/funtions";
+import {
+  logPinPadOperation,
+  parsePaymentResponse,
+  sendToPinPad,
+} from "./utils/funtions";
 
 export const requestPayment = async (req: Request, res: Response) => {
   try {
@@ -47,11 +51,13 @@ export const requestPayment = async (req: Request, res: Response) => {
       });
     }
 
-    console.log("Procesando pago:", params);
+    // console.log("Procesando pago:", params);
 
     const frame = buildPaymentFrame(params);
     const response = await sendToPinPad(frame);
     const parsedResponse = parsePaymentResponse(response);
+    console.log("Respuesta del PinPad:", parsedResponse.data);
+    logPinPadOperation(parsedResponse.data);
 
     if (parsedResponse.success) {
       res.json(parsedResponse);

@@ -70,7 +70,7 @@ app.get("/api/pinpad/payment", async (req: Request, res: Response) => {
       });
     }
 
-    console.log("Procesando pago:", params);
+    // console.log("Procesando pago:", params);
 
     const frame = buildPaymentFrame(params);
     const response = await sendToPinPad(frame);
@@ -125,7 +125,7 @@ app.post("/api/pinpad/init", async (req: Request, res: Response) => {
       gateway: gateway || PINPAD_CONFIG.network.gateway,
     };
 
-    console.log("Inicializando PinPad con configuración:", config);
+    // console.log("Inicializando PinPad con configuración:", config);
 
     const frame = buildConfigFrame(config.ip, config.mask, config.gateway);
     const response = await sendToPinPad(frame);
@@ -161,7 +161,7 @@ app.post("/api/pinpad/control", async (req: Request, res: Response) => {
       cid: cid || "CID001",
     };
 
-    console.log("Ejecutando proceso de control:", params);
+    // console.log("Ejecutando proceso de control:", params);
 
     const frame = buildControlFrame(params);
     const response = await sendToPinPad(frame);
@@ -194,7 +194,7 @@ app.post("/api/pinpad/control", async (req: Request, res: Response) => {
  */
 app.get("/api/pinpad/config-info", async (req: Request, res: Response) => {
   try {
-    console.log("Solicitando configuración básica del PinPad");
+    // console.log("Solicitando configuración básica del PinPad");
 
     const frame = buildBasicConfigFrame();
     const response = await sendToPinPad(frame);
@@ -226,7 +226,7 @@ app.get("/api/pinpad/config-info", async (req: Request, res: Response) => {
  */
 app.get("/api/pinpad/read-card", async (req: Request, res: Response) => {
   try {
-    console.log("Solicitando lectura de tarjeta");
+    // console.log("Solicitando lectura de tarjeta");
 
     const frame = buildReadCardFrame();
     const response = await sendToPinPad(frame);
