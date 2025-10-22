@@ -1,7 +1,7 @@
 import { calculateSecurityComponent } from "./utils/funtions";
 
 export function buildReverseFrame(params: {
-  tipoReverso: "03" | "04"; // 03=Anulación manual, 04=Reverso automático
+  tipoReverso: "03" | "04";
   secuencialOriginal: string;
   numeroAutorizacion: string;
   monto: number;
@@ -16,14 +16,13 @@ export function buildReverseFrame(params: {
   numeroFactura?: string;
 }): string {
   const tipo = "PP";
-  const tipoTransaccion = params.tipoReverso; // 03 o 04
-  const codigoRed = "1"; // Datafast
+  const tipoTransaccion = params.tipoReverso; // "03" ó "04"
+  const codigoRed = "1";
   const codigoDiferido = "00";
   const plazoDiferido = "00";
   const mesesGracia = "00";
   const filler1 = " ";
 
-  // Montos (igual que en la transacción original)
   const montoTotal = Math.round(params.monto * 100)
     .toString()
     .padStart(12, "0");
@@ -41,22 +40,27 @@ export function buildReverseFrame(params: {
   const propina = " ".repeat(12);
   const montoFijo = " ".repeat(12);
 
-  // IMPORTANTE: Para reversos, enviar el secuencial de la transacción original
-  const secuencial = params.secuencialOriginal.padStart(6, "0");
+  const isAnulacion = tipoTransaccion === "03";
 
-  // IMPORTANTE: Para reversos, usar fecha y hora de la transacción original
+  // ✅ Solo en 03 (anulación) se envía secuencial; en 04 (reverso) va en blancos
+  const secuencial = isAnulacion
+    ? params.secuencialOriginal.padStart(6, "0")
+    : " ".repeat(6); // :contentReference[oaicite:5]{index=5}
+
+  // Hora y fecha: para 04 puedes usar actuales; mantener las originales también es válido.
   const hora = params.horaOriginal.padStart(6, "0");
   const fecha = params.fechaOriginal.padStart(8, "0");
 
-  // IMPORTANTE: Enviar número de autorización original
-  const numeroAutorizacion = params.numeroAutorizacion
-    .substring(0, 6)
-    .padEnd(6, " ");
+  // ✅ Solo en 03 (anulación) se envía número de autorización; en 04 (reverso) va en blancos
+  const numeroAutorizacion = isAnulacion
+    ? params.numeroAutorizacion.substring(0, 6).padEnd(6, " ")
+    : " ".repeat(6); // :contentReference[oaicite:6]{index=6}
 
   const mid = params.mid.substring(0, 15).padEnd(15, " ");
   const tid = params.tid.substring(0, 8).padEnd(8, " ");
   const cid = params.cid.substring(0, 15).padEnd(15, " ");
-  const ott = " ".repeat(10);
+
+  const ott = " ".repeat(10); // 10 AN por defecto fuera de PayClub/BDP. :contentReference[oaicite:7]{index=7}
   const numeroFactura = (params.numeroFactura || "")
     .substring(0, 15)
     .padEnd(15, " ");
@@ -93,30 +97,9 @@ export function buildReverseFrame(params: {
   const securityComponent = calculateSecurityComponent(frame);
   const frameWithSecurity = frame + securityComponent;
 
-  console.log(`\n=== DEBUG TRAMA REVERSO ===`);
-  console.log(
-    `Tipo Reverso: ${
-      tipoTransaccion === "03" ? "Anulación Manual" : "Reverso Automático"
-    }`
-  );
-  console.log(`Longitud sin seguridad: ${frame.length} (esperado: 220)`);
-  console.log(`Secuencial Original: ${secuencial}`);
-  console.log(`Hora Original: ${hora}`);
-  console.log(`Fecha Original: ${fecha}`);
-  console.log(`Número Autorización: ${numeroAutorizacion.trim()}`);
-  console.log(`Monto Total: ${montoTotal} (${params.monto})`);
-  console.log(`MID: '${mid.trim()}'`);
-  console.log(`TID: '${tid.trim()}'`);
-  console.log(`CID: '${cid.trim()}'`);
-  console.log(`Factura: '${numeroFactura.trim()}'`);
-  console.log(`Security: ${securityComponent}`);
-  console.log(`Longitud total: ${frameWithSecurity.length}`);
-  console.log(`===========================\n`);
-
   const lengthHex = frameWithSecurity.length
     .toString(16)
     .padStart(4, "0")
     .toUpperCase();
-
   return lengthHex + frameWithSecurity;
 }

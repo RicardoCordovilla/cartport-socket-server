@@ -89,17 +89,18 @@ export const processReverse = async (
       tid: tidOverride,
     } = req.body;
 
+    const isAnulacion = tipoReverso === "03";
+
     if (
       !tipoReverso ||
-      !secuencialOriginal ||
-      !numeroAutorizacion ||
       !monto ||
       !montoBaseIva ||
       !montoBaseNoIva ||
       !iva ||
       !cid ||
       !fechaOriginal ||
-      !horaOriginal
+      !horaOriginal ||
+      (isAnulacion && (!secuencialOriginal || !numeroAutorizacion))
     ) {
       return res.status(400).json({
         error:

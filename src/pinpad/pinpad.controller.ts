@@ -332,7 +332,7 @@ export const executeReverse = async (params: {
   const frame = buildReverseFrame(params);
 
   const { response } = await executePinpadOperation(
-    params.tipoReverso === "03" ? "PP-ANULACION" : "PP-REVERSO",
+    params.tipoReverso === "03" ? "04" : "03",
     frame,
     {
       amount: params.monto,
