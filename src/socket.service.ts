@@ -1,5 +1,8 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
+import { parsePaymentResponse, sendToPinPad } from "./pinpad/utils/funtions";
+import { buildPaymentFrame } from "./pinpad/pinpad.controller";
+import { PINPAD_CONFIG } from "./pinpad/pinpad.config";
 
 interface WebSocketWithId extends WebSocket {
   id?: string;
@@ -7,9 +10,15 @@ interface WebSocketWithId extends WebSocket {
 
 interface MessageData {
   to?: "esp" | "web" | "all";
-  type?: string;
+  event?: string;
   from?: string;
-  [key: string]: any;
+  data?: {
+    type?: string;
+    method?: string;
+    totalPrice: number;
+    cartQuantity?: number;
+    [key: string]: any;
+  };
 }
 
 export function initializeSocketService(wss: WebSocketServer) {
@@ -51,9 +60,53 @@ export function initializeSocketService(wss: WebSocketServer) {
         const target = data.to || "all";
 
         // Log based on message type or source
-        if (data.type === "webapp:message" || data.from === "webapp") {
+        if (data.event === "webapp:message") {
           console.log("📱 Mensaje desde webapp:", data);
-        } else if (data.type === "esp32:message" || data.from === "esp32") {
+          if (data.data) {
+            if (data.data.type === "navigate" && data.data.method === "card") {
+              const params = {
+                monto: data.data.totalPrice,
+                montoBaseIva: data.data.totalPrice * 0.15,
+                montoBaseNoIva: data.data.totalPrice * 0.15,
+                iva: 15,
+                mid: PINPAD_CONFIG.merchantData.mid,
+                tid: PINPAD_CONFIG.merchantData.tid,
+                cid: "CAJA01",
+                numeroFactura: "1233454",
+              };
+              const frame = buildPaymentFrame(params);
+              sendToPinPad(frame).then((response) => {
+                const parsedResponse = parsePaymentResponse(response);
+                console.log("Respuesta del PinPad:", parsedResponse.data);
+                if (
+                  parsedResponse.data.codigoRespuesta === "00" &&
+                  parsedResponse.data.mensajeRespuesta.includes("APROBADA")
+                ) {
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "card_payment_success",
+                      totalPrice: 0,
+                    },
+                  });
+                }
+                if (
+                  parsedResponse.data.codigoRespuesta === "00" &&
+                  parsedResponse.data.mensajeRespuesta.includes("RECHAZADA")
+                ) {
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "card_payment_error",
+                      totalPrice: 0,
+                    },
+                  });
+                }
+              });
+              // const parsedResponse = parsePaymentResponse(response);
+            }
+          }
+        } else if (data.event === "esp32:message" || data.from === "esp32") {
           console.log("📡 Mensaje desde ESP32:", data);
         }
 
