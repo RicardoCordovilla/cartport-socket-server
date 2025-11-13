@@ -3,6 +3,7 @@ import { IncomingMessage } from "http";
 import { parsePaymentResponse, sendToPinPad } from "./pinpad/utils/funtions";
 import { buildPaymentFrame } from "./pinpad/pinpad.controller";
 import { PINPAD_CONFIG } from "./pinpad/pinpad.config";
+import { printAirportTicket } from "./printer/printer.controller";
 
 interface WebSocketWithId extends WebSocket {
   id?: string;
@@ -105,9 +106,37 @@ export function initializeSocketService(wss: WebSocketServer) {
               });
               // const parsedResponse = parsePaymentResponse(response);
             }
+
             if (data.data.type === "print_ticket") {
-              // Aquí puedes llamar a la función de impresión
-              console.log("Iniciar impresión para:", data.data);
+              const total = data.data.totalPrice;
+              const subtotal = parseFloat((total / 1.15).toFixed(2));
+              const tax = parseFloat((total - subtotal).toFixed(2));
+              const paid = data.data.insertedAmount || total;
+              const change = paid - total;
+              printAirportTicket("/dev/tty.usbserial-110", {
+                companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
+                location: "Quito - Ecuador",
+                airportName: "Aeropuerto Quito Mariscal Sucre",
+                phoneNumber: "123-456-7890",
+                ticketNumber: "A123456789",
+                date: "2025-11-12",
+                time: "14:30",
+                serviceType: "Coche Portaequipajes",
+                subtotal: subtotal,
+                tax: tax,
+                taxRate: 15,
+                total: total,
+                paid: paid,
+                change: change,
+                changeError: 0.0,
+                website: "www.aerogerpsa.com",
+              })
+                .then(() => {
+                  console.log("✅ Ticket impreso correctamente");
+                })
+                .catch((err) => {
+                  console.error("❌ Error imprimiendo ticket:", err);
+                });
             }
           }
         } else if (data.event === "esp32:message" || data.from === "esp32") {
