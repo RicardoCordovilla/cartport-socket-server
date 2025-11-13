@@ -105,6 +105,10 @@ export function initializeSocketService(wss: WebSocketServer) {
               });
               // const parsedResponse = parsePaymentResponse(response);
             }
+            if (data.data.type === "print_ticket") {
+              // Aquí puedes llamar a la función de impresión
+              console.log("Iniciar impresión para:", data.data);
+            }
           }
         } else if (data.event === "esp32:message" || data.from === "esp32") {
           console.log("📡 Mensaje desde ESP32:", data);
