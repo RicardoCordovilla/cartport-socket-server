@@ -7,10 +7,10 @@ interface SerialPrinterOptions {
 }
 
 export class SerialPrinter {
-  private port: SerialPort;
+  private _port: SerialPort;
 
   constructor(options: SerialPrinterOptions) {
-    this.port = new SerialPort({
+    this._port = new SerialPort({
       path: options.path,
       baudRate: options.baudRate ?? 9600,
       dataBits: 8,
@@ -20,9 +20,14 @@ export class SerialPrinter {
     });
   }
 
+  // Expose the port for status monitoring
+  get port(): SerialPort {
+    return this._port;
+  }
+
   open(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.port.open((err) => {
+      this._port.open((err) => {
         if (err) return reject(err);
         resolve();
       });
@@ -31,9 +36,9 @@ export class SerialPrinter {
 
   write(data: Buffer | string): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.port.write(data, (err) => {
+      this._port.write(data, (err) => {
         if (err) return reject(err);
-        this.port.drain((err2) => {
+        this._port.drain((err2) => {
           if (err2) return reject(err2);
           resolve();
         });
@@ -43,7 +48,7 @@ export class SerialPrinter {
 
   close(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.port.close((err) => {
+      this._port.close((err) => {
         if (err) return reject(err);
         resolve();
       });
