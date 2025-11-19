@@ -20,6 +20,7 @@ export interface PinpadConfig {
     gateway: string;
   };
   securityData: string;
+  logApiUrl: string; // Nueva configuración para la URL del API de logs
 }
 
 // Ruta del archivo de configuración
@@ -41,6 +42,7 @@ const DEFAULT_CONFIG: PinpadConfig = {
     gateway: "192.168.100.1",
   },
   securityData: "",
+  logApiUrl: "http://localhost:9000/pinpadlogs", // URL por defecto para logs
 };
 
 // Cargar configuración desde archivo

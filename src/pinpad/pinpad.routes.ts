@@ -236,4 +236,53 @@ router.post("/config/network", (req, res) => {
   }
 });
 
+// Endpoint para configurar la URL del API de logs
+router.post("/config/logs", (req, res) => {
+  try {
+    const { logApiUrl } = req.body;
+    
+    if (!logApiUrl) {
+      return res.status(400).json({
+        success: false,
+        error: "Campo requerido: logApiUrl",
+        example: {
+          logApiUrl: "http://localhost:9000/pinpadlogs"
+        }
+      });
+    }
+
+    // Validar que la URL tenga formato correcto
+    try {
+      new URL(logApiUrl);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: "La URL del API de logs no tiene un formato válido",
+        example: {
+          logApiUrl: "http://localhost:9000/pinpadlogs"
+        }
+      });
+    }
+
+    const logsConfig = { logApiUrl };
+    const updatedConfig = updatePinpadConfig(logsConfig);
+    const isComplete = isConfigComplete();
+    
+    res.json({
+      success: true,
+      message: "URL del API de logs configurada exitosamente y guardada en disco",
+      isComplete,
+      data: {
+        logApiUrl: updatedConfig.logApiUrl
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Error al configurar URL del API de logs",
+      details: error instanceof Error ? error.message : "Error desconocido"
+    });
+  }
+});
+
 export default router;

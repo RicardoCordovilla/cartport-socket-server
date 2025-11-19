@@ -131,12 +131,11 @@ export function parsePaymentResponse(response: string): PaymentResponse {
 
 export async function logPinPadOperation(logData: PaymentResponseData) {
   try {
-    // Enviar los datos al servicio remoto
-    const response = await axios.post(
-      process.env.LOG_API_URL + "pinpadlogs" ||
-        "http://localhost:9000/pinpadlogs",
-      logData
-    );
+    // Obtener configuración actual para la URL del API de logs
+    const config = getPinpadConfig();
+    
+    // Enviar los datos al servicio remoto usando la URL configurada
+    const response = await axios.post(config.logApiUrl, logData);
 
     console.log(
       "✅ Log registrado exitosamente en el servicio remoto:",
