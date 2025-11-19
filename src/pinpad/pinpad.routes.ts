@@ -4,7 +4,9 @@ import {
   getPinpadConfig, 
   updatePinpadConfig, 
   resetPinpadConfig,
-  PinpadConfig 
+  PinpadConfig,
+  deleteConfigFile,
+  isConfigComplete
 } from "./pinpad.config";
 
 const router = Router();
@@ -13,13 +15,49 @@ const router = Router();
 router.post("/payment", requestPayment);
 router.post("/reverse-payment", processReverse);
 
+// Endpoint para verificar estado de configuración
+router.get("/config/status", (req, res) => {
+  try {
+    const config = getPinpadConfig();
+    const isComplete = isConfigComplete();
+    
+    res.json({
+      success: true,
+      message: isComplete ? "Configuración completa" : "Configuración incompleta",
+      isComplete,
+      missingFields: isComplete ? [] : [
+        !config.merchantData.mid ? "mid" : null,
+        !config.merchantData.tid ? "tid" : null,
+        !config.securityData ? "securityData" : null
+      ].filter(Boolean),
+      data: {
+        hasMerchantData: !!(config.merchantData.mid && config.merchantData.tid),
+        hasSecurityData: !!config.securityData,
+        networkConfig: {
+          host: config.host,
+          port: config.port
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Error al verificar estado de configuración",
+      details: error instanceof Error ? error.message : "Error desconocido"
+    });
+  }
+});
+
 // Nuevos endpoints para gestión de configuración
 router.get("/config", (req, res) => {
   try {
     const config = getPinpadConfig();
+    const isComplete = isConfigComplete();
+    
     res.json({
       success: true,
       message: "Configuración actual del PinPad",
+      isComplete,
       data: config
     });
   } catch (error) {
@@ -54,10 +92,12 @@ router.post("/config", (req, res) => {
     }
 
     const updatedConfig = updatePinpadConfig(newConfig);
+    const isComplete = isConfigComplete();
     
     res.json({
       success: true,
-      message: "Configuración actualizada exitosamente",
+      message: "Configuración actualizada exitosamente y guardada en disco",
+      isComplete,
       data: updatedConfig
     });
   } catch (error) {
@@ -74,13 +114,42 @@ router.post("/config/reset", (req, res) => {
     const resetConfig = resetPinpadConfig();
     res.json({
       success: true,
-      message: "Configuración reiniciada a valores por defecto",
+      message: "Configuración reiniciada a valores por defecto y guardada en disco",
+      isComplete: false,
       data: resetConfig
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       error: "Error al reiniciar configuración",
+      details: error instanceof Error ? error.message : "Error desconocido"
+    });
+  }
+});
+
+// Endpoint para eliminar completamente el archivo de configuración
+router.delete("/config/file", (req, res) => {
+  try {
+    const deleted = deleteConfigFile();
+    if (deleted) {
+      // Reiniciar configuración en memoria también
+      resetPinpadConfig();
+      res.json({
+        success: true,
+        message: "Archivo de configuración eliminado y configuración reiniciada",
+        isComplete: false
+      });
+    } else {
+      res.json({
+        success: true,
+        message: "No había archivo de configuración que eliminar",
+        isComplete: false
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Error al eliminar archivo de configuración",
       details: error instanceof Error ? error.message : "Error desconocido"
     });
   }
@@ -114,10 +183,12 @@ router.post("/config/merchant", (req, res) => {
     };
 
     const updatedConfig = updatePinpadConfig(merchantConfig);
+    const isComplete = isConfigComplete();
     
     res.json({
       success: true,
-      message: "Datos del comercio configurados exitosamente",
+      message: "Datos del comercio configurados exitosamente y guardados en disco",
+      isComplete,
       data: {
         merchantData: updatedConfig.merchantData,
         securityData: updatedConfig.securityData
@@ -144,10 +215,12 @@ router.post("/config/network", (req, res) => {
     if (network) networkConfig.network = network;
 
     const updatedConfig = updatePinpadConfig(networkConfig);
+    const isComplete = isConfigComplete();
     
     res.json({
       success: true,
-      message: "Configuración de red actualizada exitosamente",
+      message: "Configuración de red actualizada exitosamente y guardada en disco",
+      isComplete,
       data: {
         host: updatedConfig.host,
         port: updatedConfig.port,
