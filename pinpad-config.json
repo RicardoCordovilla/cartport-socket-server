@@ -1,0 +1,17 @@
+{
+  "host": "192.168.100.24",
+  "port": 9999,
+  "timeout": 60000,
+  "merchantData": {
+    "mid": "1791310199",
+    "tid": "NP319559",
+    "claveTecnica": "166831"
+  },
+  "network": {
+    "ip": "192.168.100.198",
+    "mask": "255.255.255.0",
+    "gateway": "192.168.100.1"
+  },
+  "securityData": "B12D3D63069BD9EB05B7BBEEAA228ABC",
+  "logApiUrl": "http://192.168.100.63:3000/pinpadlogs"
+}
