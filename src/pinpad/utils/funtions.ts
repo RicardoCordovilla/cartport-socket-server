@@ -1,7 +1,7 @@
 import axios from "axios";
 import net from "net";
 import { PaymentResponse, PaymentResponseData } from "../../types/pinpad";
-import { PINPAD_CONFIG } from "../pinpad.config";
+import { getPinpadConfig } from "../pinpad.config";
 
 /**
  * Calcula el componente de seguridad (LL) para la trama
@@ -18,6 +18,9 @@ export function calculateSecurityComponent(frame: string): string {
     lrc ^= frame.charCodeAt(i);
   }
 
+  // Obtener configuración actual para el securityData
+  const config = getPinpadConfig();
+  
   // El formato parece ser: "01" + datos + "02" (STX y ETX)
   // Convertir a hexadecimal y completar con datos
   const lrcHex = lrc.toString(16).padStart(2, "0").toUpperCase();
@@ -25,7 +28,7 @@ export function calculateSecurityComponent(frame: string): string {
   // Generar un componente de seguridad de 32 caracteres
   // El patrón parece ser consistente en los ejemplos
   const securityData =
-    PINPAD_CONFIG.securityData.padEnd(32, "0").substring(0, 30) + lrcHex;
+    config.securityData.padEnd(32, "0").substring(0, 30) + lrcHex;
 
   return securityData;
 }
@@ -152,7 +155,8 @@ export async function logPinPadOperation(logData: PaymentResponseData) {
  */
 export async function sendToPinPad(frame: string): Promise<string> {
   const startTime = Date.now(); // Registrar el tiempo de inicio
-  const pinpadIp = PINPAD_CONFIG.host; // IP del PinPad
+  const config = getPinpadConfig(); // Obtener configuración actual
+  const pinpadIp = config.host; // IP del PinPad desde configuración dinámica
 
   return new Promise((resolve, reject) => {
     const client = new net.Socket();
@@ -161,31 +165,10 @@ export async function sendToPinPad(frame: string): Promise<string> {
     const timeout = setTimeout(() => {
       client.destroy();
       const errorMessage = "Timeout al comunicarse con el PinPad";
-      // logPinPadOperation({
-      //   operationType: frame.substring(0, 2),
-      //   requestFrame: frame,
-      //   responseFrame: null,
-      //   responseCode: null,
-      //   responseMessage: null,
-      //   success: false,
-      //   amount: null,
-      //   merchantId: PINPAD_CONFIG.merchantData.mid,
-      //   terminalId: PINPAD_CONFIG.merchantData.tid,
-      //   cajaId: process.env.CAJA_ID || "CAJA001",
-      //   cardNumber: null,
-      //   authorizationNumber: null,
-      //   batchNumber: null,
-      //   sequentialNumber: null,
-      //   invoiceNumber: null,
-      //   metadata: { extraData: "Timeout" },
-      //   responseTime: Date.now() - startTime,
-      //   errorMessage,
-      //   pinpadIp,
-      // });
       reject(new Error(errorMessage));
-    }, PINPAD_CONFIG.timeout);
+    }, config.timeout);
 
-    client.connect(PINPAD_CONFIG.port, pinpadIp, () => {
+    client.connect(config.port, pinpadIp, () => {
       // console.log("Conectado al PinPad");
       client.write(frame);
     });
@@ -199,56 +182,11 @@ export async function sendToPinPad(frame: string): Promise<string> {
       const responseCode = responseData.substring(2, 4); // Código de respuesta
       const success = responseCode === "00";
 
-      // logPinPadOperation({
-      //   operationType: frame.substring(0, 2),
-      //   requestFrame: frame,
-      //   responseFrame: responseData,
-      //   responseCode,
-      //   responseMessage: success
-      //     ? "Operación exitosa"
-      //     : "Error en la operación",
-      //   success,
-      //   amount: parseFloat(frame.substring(12, 24)) / 100 || null, // Monto total
-      //   merchantId: PINPAD_CONFIG.merchantData.mid,
-      //   terminalId: PINPAD_CONFIG.merchantData.tid,
-      //   cajaId: process.env.CAJA_ID || "CAJA001",
-      //   cardNumber: responseData.substring(6, 31).trim() || null, // Tarjeta truncada
-      //   authorizationNumber: responseData.substring(54, 60).trim() || null, // Número de autorización
-      //   batchNumber: responseData.substring(34, 40) || null, // Lote
-      //   sequentialNumber: responseData.substring(28, 34) || null, // Secuencial
-      //   invoiceNumber: null, // Número de factura
-      //   metadata: { extraData: "Información adicional" },
-      //   responseTime,
-      //   errorMessage: null,
-      //   pinpadIp,
-      // });
-
       resolve(responseData);
     });
 
     client.on("error", (err) => {
       clearTimeout(timeout);
-      // logPinPadOperation({
-      //   operationType: frame.substring(0, 2),
-      //   requestFrame: frame,
-      //   responseFrame: null,
-      //   responseCode: null,
-      //   responseMessage: null,
-      //   success: false,
-      //   amount: null,
-      //   merchantId: PINPAD_CONFIG.merchantData.mid,
-      //   terminalId: PINPAD_CONFIG.merchantData.tid,
-      //   cajaId: process.env.CAJA_ID || "CAJA001",
-      //   cardNumber: null,
-      //   authorizationNumber: null,
-      //   batchNumber: null,
-      //   sequentialNumber: null,
-      //   invoiceNumber: null,
-      //   metadata: { extraData: "Error de conexión" },
-      //   responseTime: Date.now() - startTime,
-      //   errorMessage: err.message,
-      //   pinpadIp,
-      // });
       reject(err);
     });
 
@@ -256,27 +194,6 @@ export async function sendToPinPad(frame: string): Promise<string> {
       if (!responseData) {
         clearTimeout(timeout);
         const errorMessage = "Conexión cerrada sin respuesta";
-        // logPinPadOperation({
-        //   operationType: frame.substring(0, 2),
-        //   requestFrame: frame,
-        //   responseFrame: null,
-        //   responseCode: null,
-        //   responseMessage: null,
-        //   success: false,
-        //   amount: null,
-        //   merchantId: PINPAD_CONFIG.merchantData.mid,
-        //   terminalId: PINPAD_CONFIG.merchantData.tid,
-        //   cajaId: process.env.CAJA_ID || "CAJA001",
-        //   cardNumber: null,
-        //   authorizationNumber: null,
-        //   batchNumber: null,
-        //   sequentialNumber: null,
-        //   invoiceNumber: null,
-        //   metadata: { extraData: "Conexión cerrada" },
-        //   responseTime: Date.now() - startTime,
-        //   errorMessage,
-        //   pinpadIp,
-        // });
         reject(new Error(errorMessage));
       }
     });

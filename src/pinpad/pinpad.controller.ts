@@ -1,4 +1,4 @@
-import { PINPAD_CONFIG } from "./pinpad.config";
+import { getPinpadConfig } from "./pinpad.config";
 import { buildReverseFrame } from "./pinpad.helper";
 import {
   calculateSecurityComponent,
@@ -14,6 +14,7 @@ export function buildConfigFrame(
   mask: string,
   gateway: string
 ): string {
+  const config = getPinpadConfig();
   const tipo = "CP";
   const ipPadded = ip.padEnd(15, " ");
   const maskPadded = mask.padEnd(15, " ");
@@ -31,7 +32,7 @@ export function buildConfigFrame(
   const filler3 = "".padEnd(15, " ");
   const filler4 = "".padEnd(6, " ");
 
-  const listenPort = PINPAD_CONFIG.port.toString().padStart(6, "0");
+  const listenPort = config.port.toString().padStart(6, "0");
 
   const frame =
     tipo +

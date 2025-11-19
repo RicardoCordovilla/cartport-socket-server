@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { PINPAD_CONFIG } from "./pinpad.config";
+import { getPinpadConfig } from "./pinpad.config";
 import { buildPaymentFrame, executeReverse } from "./pinpad.controller";
 import {
   logPinPadOperation,
@@ -20,6 +20,7 @@ export const requestPayment = async (req: Request, res: Response) => {
       mid: midOverride,
       tid: tidOverride,
     } = req.query;
+    
     if (!monto || !montoBaseIva || !montoBaseNoIva || !iva || !cid) {
       return res.status(400).json({
         error:
@@ -28,13 +29,25 @@ export const requestPayment = async (req: Request, res: Response) => {
       });
     }
 
+    // Obtener configuración actual
+    const config = getPinpadConfig();
+    
+    // Verificar que los datos del comercio estén configurados
+    if (!config.merchantData.mid || !config.merchantData.tid || !config.securityData) {
+      return res.status(400).json({
+        error: "Configuración del comercio incompleta",
+        message: "Debe configurar MID, TID y SecurityData primero",
+        hint: "Use POST /pinpad/config/merchant para configurar los datos del comercio"
+      });
+    }
+
     const params = {
       monto: parseFloat(monto as string),
       montoBaseIva: parseFloat(montoBaseIva as string),
       montoBaseNoIva: parseFloat(montoBaseNoIva as string),
       iva: parseFloat(iva as string),
-      mid: (midOverride as string) || PINPAD_CONFIG.merchantData.mid,
-      tid: (tidOverride as string) || PINPAD_CONFIG.merchantData.tid,
+      mid: (midOverride as string) || config.merchantData.mid,
+      tid: (tidOverride as string) || config.merchantData.tid,
       cid: cid as string,
       numeroFactura: numeroFactura as string | undefined,
     };
@@ -134,6 +147,18 @@ export const processReverse = async (
       });
     }
 
+    // Obtener configuración actual
+    const config = getPinpadConfig();
+    
+    // Verificar que los datos del comercio estén configurados
+    if (!config.merchantData.mid || !config.merchantData.tid) {
+      return res.status(400).json({
+        error: "Configuración del comercio incompleta",
+        message: "Debe configurar MID y TID primero",
+        hint: "Use POST /pinpad/config/merchant para configurar los datos del comercio"
+      });
+    }
+
     const params = {
       tipoReverso: tipoReverso as "03" | "04",
       secuencialOriginal,
@@ -142,8 +167,8 @@ export const processReverse = async (
       montoBaseIva: parseFloat(montoBaseIva),
       montoBaseNoIva: parseFloat(montoBaseNoIva),
       iva: parseFloat(iva),
-      mid: midOverride || PINPAD_CONFIG.merchantData.mid,
-      tid: tidOverride || PINPAD_CONFIG.merchantData.tid,
+      mid: midOverride || config.merchantData.mid,
+      tid: tidOverride || config.merchantData.tid,
       cid,
       fechaOriginal,
       horaOriginal,

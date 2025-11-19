@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { parsePaymentResponse, sendToPinPad } from "./pinpad/utils/funtions";
 import { buildPaymentFrame } from "./pinpad/pinpad.controller";
-import { PINPAD_CONFIG } from "./pinpad/pinpad.config";
+import { getPinpadConfig } from "./pinpad/pinpad.config";
 import { printAirportTicket } from "./printer/printer.controller";
 
 interface WebSocketWithId extends WebSocket {
@@ -65,13 +65,30 @@ export function initializeSocketService(wss: WebSocketServer) {
           console.log("📱 Mensaje desde webapp:", data);
           if (data.data) {
             if (data.data.type === "navigate" && data.data.method === "card") {
+              // Obtener configuración actual del PinPad
+              const config = getPinpadConfig();
+              
+              // Verificar que la configuración esté completa
+              if (!config.merchantData.mid || !config.merchantData.tid || !config.securityData) {
+                console.error("❌ Configuración del PinPad incompleta");
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "card_payment_error",
+                    message: "Configuración del PinPad incompleta",
+                    totalPrice: 0,
+                  },
+                });
+                return;
+              }
+
               const params = {
                 monto: data.data.totalPrice,
                 montoBaseIva: data.data.totalPrice * 0.15,
                 montoBaseNoIva: data.data.totalPrice * 0.15,
                 iva: 15,
-                mid: PINPAD_CONFIG.merchantData.mid,
-                tid: PINPAD_CONFIG.merchantData.tid,
+                mid: config.merchantData.mid,
+                tid: config.merchantData.tid,
                 cid: "CAJA01",
                 numeroFactura: "1233454",
               };
@@ -103,8 +120,17 @@ export function initializeSocketService(wss: WebSocketServer) {
                     },
                   });
                 }
+              }).catch((error) => {
+                console.error("❌ Error en comunicación con PinPad:", error);
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "card_payment_error",
+                    message: "Error de comunicación con PinPad",
+                    totalPrice: 0,
+                  },
+                });
               });
-              // const parsedResponse = parsePaymentResponse(response);
             }
 
             if (data.data.type === "print_ticket") {
