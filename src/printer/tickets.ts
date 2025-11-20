@@ -21,9 +21,9 @@ interface PrinterConfig {
   printerName?: string; // Para impresoras USB
 }
 
-// Función para obtener impresoras USB disponibles
-export function getAvailableUSBPrinters(): string[] {
-  return USBPrinter.getAvailablePrinters();
+// Función para obtener impresoras USB disponibles (ahora asíncrona)
+export async function getAvailableUSBPrinters(): Promise<string[]> {
+  return await USBPrinter.getAvailablePrinters();
 }
 
 // Función unificada para imprimir tickets

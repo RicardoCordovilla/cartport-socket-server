@@ -59,9 +59,9 @@ export const printTicket = (req: Request, res: Response) => {
 };
 
 // Nuevo endpoint para obtener impresoras USB disponibles
-export const getUSBPrinters = (req: Request, res: Response) => {
+export const getUSBPrinters = async (req: Request, res: Response) => {
   try {
-    const printers = getAvailableUSBPrinters();
+    const printers = await getAvailableUSBPrinters();
     res.json({
       success: true,
       printers,

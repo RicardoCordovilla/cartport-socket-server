@@ -1,47 +1,59 @@
 // src/printer/usbPrinter.ts
-import { ThermalPrinter, PrinterTypes, CharacterSet, BreakLine } from 'node-thermal-printer';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const execAsync = promisify(exec);
 
 interface USBPrinterOptions {
   printerName?: string; // Nombre de la impresora USB
-  characterSet?: CharacterSet;
 }
 
 export class USBPrinter {
-  private printer: ThermalPrinter;
   private printerName: string;
 
   constructor(options: USBPrinterOptions = {}) {
-    this.printerName = options.printerName || 'USB001';
-    
-    // Configuración corregida para USB con driver específico
-    this.printer = new ThermalPrinter({
-      type: PrinterTypes.EPSON,
-      interface: `/dev/usb/lp0`, // Interface USB genérica para Linux/macOS
-      driver: require('printer'), // Driver nativo del sistema
-      characterSet: options.characterSet || CharacterSet.PC852_LATIN2,
-      removeSpecialCharacters: false,
-      lineCharacter: "=",
-      breakLine: BreakLine.WORD,
-      options: {
-        timeout: 5000
-      }
-    });
+    this.printerName = options.printerName || this.getDefaultPrinter();
   }
 
-  static getAvailablePrinters(): string[] {
-    // node-thermal-printer no tiene una función directa para listar impresoras
-    // Por ahora retornamos algunas opciones comunes
-    return ['default', 'usb', 'thermal'];
+  private getDefaultPrinter(): string {
+    // En macOS, intentamos obtener la impresora por defecto
+    try {
+      // Esto funcionará en macOS
+      return 'default';
+    } catch (error) {
+      return 'USB';
+    }
+  }
+
+  static async getAvailablePrinters(): Promise<string[]> {
+    try {
+      // En macOS usamos lpstat para listar impresoras
+      const { stdout } = await execAsync('lpstat -p');
+      const printers = stdout
+        .split('\n')
+        .filter(line => line.startsWith('printer'))
+        .map(line => line.split(' ')[1])
+        .filter(name => name);
+      
+      return printers.length > 0 ? printers : ['default'];
+    } catch (error) {
+      console.warn('No se pudieron listar las impresoras:', error);
+      return ['default', 'USB'];
+    }
   }
 
   async open(): Promise<void> {
     try {
-      const isConnected = await this.printer.isPrinterConnected();
-      if (!isConnected) {
-        throw new Error('No se pudo conectar con la impresora USB');
+      // Verificar que la impresora esté disponible
+      const printers = await USBPrinter.getAvailablePrinters();
+      if (!printers.includes(this.printerName) && this.printerName !== 'default') {
+        console.warn(`Impresora ${this.printerName} no encontrada, usando default`);
+        this.printerName = 'default';
       }
     } catch (error) {
-      throw new Error(`Error al conectar con la impresora USB: ${error}`);
+      console.warn('Error al verificar impresora:', error);
     }
   }
 
@@ -49,61 +61,41 @@ export class USBPrinter {
     try {
       const printData = typeof data === 'string' ? data : data.toString();
       
-      // Limpiar el buffer previo
-      this.printer.clear();
+      // Crear archivo temporal con los datos
+      const tempFile = path.join('/tmp', `ticket_${Date.now()}.txt`);
+      fs.writeFileSync(tempFile, printData);
+
+      // Imprimir usando lp (macOS/Linux)
+      let command: string;
       
-      // Agregar el contenido
-      this.printer.raw(Buffer.from(printData));
+      if (this.printerName === 'default') {
+        command = `lp "${tempFile}"`;
+      } else {
+        command = `lp -d "${this.printerName}" "${tempFile}"`;
+      }
+
+      await execAsync(command);
       
-      // Ejecutar la impresión
-      await this.printer.execute();
-      
-      return Promise.resolve();
+      // Limpiar archivo temporal después de un breve delay
+      setTimeout(() => {
+        try {
+          fs.unlinkSync(tempFile);
+        } catch (e) {
+          console.warn('No se pudo eliminar archivo temporal:', e);
+        }
+      }, 1000);
+
     } catch (error) {
-      return Promise.reject(new Error(`Error al imprimir por USB: ${error}`));
+      throw new Error(`Error al imprimir por USB: ${error}`);
     }
   }
 
   async close(): Promise<void> {
-    try {
-      // Cortar el papel antes de cerrar
-      this.printer.cut();
-      await this.printer.execute();
-      return Promise.resolve();
-    } catch (error) {
-      return Promise.reject(new Error(`Error al cerrar impresora USB: ${error}`));
-    }
+    // No hay conexión persistente que cerrar en este enfoque
+    return Promise.resolve();
   }
 
   getPrinterName(): string {
     return this.printerName;
-  }
-
-  // Método adicional para impresión con formato
-  async printFormatted(content: string): Promise<void> {
-    try {
-      this.printer.clear();
-      
-      // Configurar formato
-      this.printer.alignCenter();
-      this.printer.setTextSize(1, 1);
-      this.printer.bold(true);
-      this.printer.println("CONDOMINAR");
-      this.printer.bold(false);
-      
-      this.printer.alignLeft();
-      this.printer.drawLine();
-      this.printer.println(content);
-      this.printer.drawLine();
-      
-      this.printer.alignCenter();
-      this.printer.println("Gracias por su pago");
-      this.printer.newLine();
-      this.printer.cut();
-      
-      await this.printer.execute();
-    } catch (error) {
-      throw new Error(`Error en impresión formateada: ${error}`);
-    }
   }
 }
