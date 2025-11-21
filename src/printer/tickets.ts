@@ -13,7 +13,7 @@ interface PaymentTicketData {
   amount: number;
 }
 
-interface AirportTicketData {
+export interface AirportTicketData {
   companyName: string;
   location: string;
   airportName: string;

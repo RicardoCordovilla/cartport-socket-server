@@ -3,7 +3,7 @@ import { IncomingMessage } from "http";
 import { parsePaymentResponse, sendToPinPad } from "./pinpad/utils/funtions";
 import { buildPaymentFrame } from "./pinpad/pinpad.controller";
 import { getPinpadConfig } from "./pinpad/pinpad.config";
-import { printAirportTicket } from "./printer/printer.controller";
+import { printPaymentTicket } from "./printer/tickets";
 
 interface WebSocketWithId extends WebSocket {
   id?: string;
@@ -16,8 +16,10 @@ interface MessageData {
   data?: {
     type?: string;
     method?: string;
-    totalPrice: number;
+    totalPrice?: number; // Hacer opcional para mensajes que no requieren precio
     cartQuantity?: number;
+    message?: string;
+    error?: string;
     [key: string]: any;
   };
 }
@@ -65,6 +67,19 @@ export function initializeSocketService(wss: WebSocketServer) {
           console.log("📱 Mensaje desde webapp:", data);
           if (data.data) {
             if (data.data.type === "navigate" && data.data.method === "card") {
+              // Validar que totalPrice esté definido
+              if (!data.data.totalPrice || data.data.totalPrice <= 0) {
+                console.error("❌ totalPrice no válido:", data.data.totalPrice);
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "card_payment_error",
+                    message: "Monto total no válido",
+                  },
+                });
+                return;
+              }
+
               // Obtener configuración actual del PinPad
               const config = getPinpadConfig();
               
@@ -76,16 +91,16 @@ export function initializeSocketService(wss: WebSocketServer) {
                   data: {
                     type: "card_payment_error",
                     message: "Configuración del PinPad incompleta",
-                    totalPrice: 0,
                   },
                 });
                 return;
               }
 
+              const totalPrice = data.data.totalPrice;
               const params = {
-                monto: data.data.totalPrice,
-                montoBaseIva: data.data.totalPrice * 0.15,
-                montoBaseNoIva: data.data.totalPrice * 0.15,
+                monto: totalPrice,
+                montoBaseIva: totalPrice * 0.15,
+                montoBaseNoIva: totalPrice * 0.15,
                 iva: 15,
                 mid: config.merchantData.mid,
                 tid: config.merchantData.tid,
@@ -134,34 +149,72 @@ export function initializeSocketService(wss: WebSocketServer) {
             }
 
             if (data.data.type === "print_ticket") {
+              // Validar que totalPrice esté definido
+              if (!data.data.totalPrice || data.data.totalPrice <= 0) {
+                console.error("❌ totalPrice no válido para impresión:", data.data.totalPrice);
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "print_error",
+                    message: "Monto total no válido para impresión",
+                  },
+                });
+                return;
+              }
+
               const total = data.data.totalPrice;
               const subtotal = parseFloat((total / 1.15).toFixed(2));
               const tax = parseFloat((total - subtotal).toFixed(2));
               const paid = data.data.insertedAmount || total;
               const change = paid - total;
-              printAirportTicket("/dev/tty.usbserial-110", {
-                companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
-                location: "Quito - Ecuador",
-                airportName: "Aeropuerto Quito Mariscal Sucre",
-                phoneNumber: "123-456-7890",
-                ticketNumber: "A123456789",
-                date: "2025-11-12",
-                time: "14:30",
-                serviceType: "Coche Portaequipajes",
-                subtotal: subtotal,
-                tax: tax,
-                taxRate: 15,
-                total: total,
-                paid: paid,
-                change: change,
-                changeError: 0.0,
-                website: "www.aerogerpsa.com",
-              })
+              
+              // Usar la nueva función unificada de impresión
+              printPaymentTicket(
+                { 
+                  type: 'usb',  // Cambiar a 'serial' si quieres usar impresión serial
+                  printerName: 'default' // o especificar el nombre de una impresora específica
+                },
+                {
+                  companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
+                  location: "AEROGERPSA S.A.\nVia a Tababela",
+                  airportName: "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
+                  phoneNumber: "022818462",
+                  ticketNumber: `A${Date.now().toString().slice(-9)}`, // Número único basado en timestamp
+                  date: new Date().toLocaleDateString('es-EC'),
+                  time: new Date().toLocaleTimeString('es-EC'),
+                  serviceType: "Coche Portaequipajes",
+                  subtotal: subtotal,
+                  tax: tax,
+                  taxRate: 15,
+                  total: total,
+                  paid: paid,
+                  change: change,
+                  changeError: 0.0,
+                  website: "www.aerogerpsa.com",
+                }
+              )
                 .then(() => {
-                  console.log("✅ Ticket impreso correctamente");
+                  console.log("✅ Ticket impreso correctamente por USB");
+                  // Notificar a la webapp que la impresión fue exitosa
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "print_success",
+                      message: "Ticket impreso correctamente",
+                    },
+                  });
                 })
                 .catch((err) => {
                   console.error("❌ Error imprimiendo ticket:", err);
+                  // Notificar a la webapp que hubo un error en la impresión
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "print_error",
+                      message: "Error al imprimir ticket",
+                      error: err.message,
+                    },
+                  });
                 });
             }
           }

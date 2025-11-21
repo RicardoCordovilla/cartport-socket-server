@@ -1,4 +1,5 @@
 import { SerialPrinter } from "./serialPrinter";
+import { printPaymentTicket, AirportTicketData } from "./tickets";
 
 const ESC = "\x1B";
 const GS = "\x1D";
@@ -22,26 +23,20 @@ const ALIGN_LEFT = ESC + "a" + "\x00";    // Alineación izquierda
 const ALIGN_CENTER = ESC + "a" + "\x01";  // Alineación centrada
 const ALIGN_RIGHT = ESC + "a" + "\x02";   // Alineación derecha
 
-interface AirportTicketData {
-  companyName: string;
-  location: string;
-  airportName: string;
-  phoneNumber: string;
-  ticketNumber: string;
-  date: string;
-  time: string;
-  serviceType: string;
-  subtotal: number;
-  tax: number;
-  taxRate: number;
-  total: number;
-  paid: number;
-  change: number;
-  changeError: number;
-  website?: string;
+// Función principal que ahora usa el sistema unificado
+export async function printAirportTicket(
+  devicePath: string,
+  data: AirportTicketData
+) {
+  // Usar el nuevo sistema unificado para impresión serial
+  return await printPaymentTicket(
+    { type: 'serial', devicePath },
+    data
+  );
 }
 
-export async function printAirportTicket(
+// Función alternativa con formato personalizado (mantiene el formato original)
+export async function printAirportTicketCustomFormat(
   devicePath: string,
   data: AirportTicketData
 ) {
