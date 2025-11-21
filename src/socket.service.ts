@@ -168,11 +168,11 @@ export function initializeSocketService(wss: WebSocketServer) {
               const paid = data.data.insertedAmount || total;
               const change = paid - total;
               
-              // Usar la nueva función unificada de impresión
+              // Usar la nueva función unificada de impresión con ESC/POS para corte automático
               printPaymentTicket(
                 { 
-                  type: 'usb',  // Cambiar a 'serial' si quieres usar impresión serial
-                  printerName: 'default' // o especificar el nombre de una impresora específica
+                  type: 'escpos'  // Cambiar de 'usb' a 'escpos' para corte automático real
+                  // vendorId y productId se detectan automáticamente
                 },
                 {
                   companyName: "SERVICIOS DE GESTION AEROPORTUARIA",

@@ -27,6 +27,36 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
+"@node-escpos/adapter@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.npmjs.org/@node-escpos/adapter/-/adapter-0.0.1.tgz"
+  integrity sha512-I1RT6GjwxkzqCZBJ27XVDvSwPEzpP4aPJfjWCym5LY2Zj1o+fSXcIOMnR/U5cp4FZTFfERFcQpkDvMAHu+qnHA==
+  dependencies:
+    eventemitter3 "^4.0.7"
+
+"@node-escpos/core@^0.6.0":
+  version "0.6.0"
+  resolved "https://registry.npmjs.org/@node-escpos/core/-/core-0.6.0.tgz"
+  integrity sha512-6JccIYy0o5epBcLE9GcxT19YTL4ydQeP3TPj3grsFjHmGZ+D6whwXtGZ5VosW6PbU01dXtxJG2IotPtZPLWTqA==
+  dependencies:
+    "@node-escpos/adapter" "0.0.1"
+    "@types/ndarray" "^1.0.11"
+    "@types/qr-image" "^3.2.4"
+    eventemitter3 "^4.0.7"
+    get-pixels "*"
+    iconv-lite "*"
+    mutable-buffer "^2.0.3"
+    ndarray "^1.0.19"
+    qr-image "*"
+
+"@node-escpos/usb-adapter@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.npmjs.org/@node-escpos/usb-adapter/-/usb-adapter-0.3.1.tgz"
+  integrity sha512-n1e3k73nN6RJAmbRNSrVD3zjlkFvDiXB9u2UsH4V2UxSqU4FFbBO6zn3aVMFJU/SAoIa5GWZqBnRvaH/Q9DAZw==
+  dependencies:
+    "@node-escpos/adapter" "0.0.1"
+    usb "*"
+
 "@serialport/binding-mock@10.2.2":
   version "10.2.2"
   resolved "https://registry.npmjs.org/@serialport/binding-mock/-/binding-mock-10.2.2.tgz"
@@ -194,6 +224,11 @@
   resolved "https://registry.npmjs.org/@types/mime/-/mime-1.3.5.tgz"
   integrity sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w==
 
+"@types/ndarray@^1.0.11":
+  version "1.0.14"
+  resolved "https://registry.npmjs.org/@types/ndarray/-/ndarray-1.0.14.tgz"
+  integrity sha512-oANmFZMnFQvb219SSBIhI1Ih/r4CvHDOzkWyJS/XRqkMrGH5/kaPSA1hQhdIBzouaE+5KpE/f5ylI9cujmckQg==
+
 "@types/node@*", "@types/node@^24.6.1":
   version "24.6.1"
   resolved "https://registry.npmjs.org/@types/node/-/node-24.6.1.tgz"
@@ -205,6 +240,13 @@
   version "0.4.5"
   resolved "https://registry.npmjs.org/@types/printer/-/printer-0.4.5.tgz"
   integrity sha512-cl2aJE2aHSjpNJhgeqvIGqNbonMTu2VbxrByLolLXVT26ynVIxXh6xYsxAOFyU1GVcAheUph6MsB+ogSzdjrrA==
+  dependencies:
+    "@types/node" "*"
+
+"@types/qr-image@^3.2.4":
+  version "3.2.9"
+  resolved "https://registry.npmjs.org/@types/qr-image/-/qr-image-3.2.9.tgz"
+  integrity sha512-vmqTI+ehoC07jtzjT9Dc+3eMpXTgdluD9orVHtp9bN1gE81SnOuMe9+EwmRuWfTH04YNyk1mihI/Vr7BIhUCZg==
   dependencies:
     "@types/node" "*"
 
@@ -606,6 +648,11 @@ etag@^1.8.1:
   version "1.8.1"
   resolved "https://registry.npmjs.org/etag/-/etag-1.8.1.tgz"
   integrity sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==
+
+eventemitter3@^4.0.7:
+  version "4.0.7"
+  resolved "https://registry.npmjs.org/eventemitter3/-/eventemitter3-4.0.7.tgz"
+  integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
 
 express@^5.1.0:
   version "5.1.0"
@@ -1037,7 +1084,7 @@ ndarray-pack@^1.1.1:
     cwise-compiler "^1.1.2"
     ndarray "^1.0.13"
 
-ndarray@^1.0.13:
+ndarray@^1.0.13, ndarray@^1.0.19:
   version "1.0.19"
   resolved "https://registry.npmjs.org/ndarray/-/ndarray-1.0.19.tgz"
   integrity sha512-B4JHA4vdyZU30ELBw3g7/p9bZupyew5a7tX1Y/gGeF2hafrPaQZhgrGQfsvgfYbgdFZjYwuEcnaobeM/WMW+HQ==
