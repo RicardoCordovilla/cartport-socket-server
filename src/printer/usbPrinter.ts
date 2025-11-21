@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -12,35 +13,51 @@ interface USBPrinterOptions {
 
 export class USBPrinter {
   private printerName: string;
+  private isWindows: boolean;
 
   constructor(options: USBPrinterOptions = {}) {
+    this.isWindows = os.platform() === 'win32';
     this.printerName = options.printerName || this.getDefaultPrinter();
   }
 
   private getDefaultPrinter(): string {
-    // En macOS, intentamos obtener la impresora por defecto
-    try {
-      // Esto funcionará en macOS
-      return 'default';
-    } catch (error) {
-      return 'USB';
+    if (this.isWindows) {
+      return 'default'; // En Windows usaremos la impresora por defecto
+    } else {
+      return 'default'; // En macOS/Linux también
     }
   }
 
   static async getAvailablePrinters(): Promise<string[]> {
+    const isWindows = os.platform() === 'win32';
+    
     try {
-      // En macOS usamos lpstat para listar impresoras
-      const { stdout } = await execAsync('lpstat -p');
-      const printers = stdout
-        .split('\n')
-        .filter(line => line.startsWith('printer'))
-        .map(line => line.split(' ')[1])
-        .filter(name => name);
-      
-      return printers.length > 0 ? printers : ['default'];
+      if (isWindows) {
+        // En Windows usamos wmic para listar impresoras
+        const { stdout } = await execAsync('wmic printer get name /format:csv');
+        const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
+        const printers = lines
+          .map(line => {
+            const parts = line.split(',');
+            return parts[parts.length - 1]?.trim();
+          })
+          .filter(name => name && name !== '');
+        
+        return printers.length > 0 ? printers : ['default'];
+      } else {
+        // En macOS/Linux usamos lpstat
+        const { stdout } = await execAsync('lpstat -p');
+        const printers = stdout
+          .split('\n')
+          .filter(line => line.startsWith('printer'))
+          .map(line => line.split(' ')[1])
+          .filter(name => name);
+        
+        return printers.length > 0 ? printers : ['default'];
+      }
     } catch (error) {
       console.warn('No se pudieron listar las impresoras:', error);
-      return ['default', 'USB'];
+      return ['default'];
     }
   }
 
@@ -61,17 +78,35 @@ export class USBPrinter {
     try {
       const printData = typeof data === 'string' ? data : data.toString();
       
-      // Crear archivo temporal con los datos
-      const tempFile = path.join('/tmp', `ticket_${Date.now()}.txt`);
+      // Crear directorio temporal apropiado según el OS
+      const tempDir = this.isWindows ? 'C:\\tmp' : '/tmp';
+      
+      // Crear el directorio si no existe (solo para Windows)
+      if (this.isWindows && !fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempFile = path.join(tempDir, `ticket_${Date.now()}.txt`);
       fs.writeFileSync(tempFile, printData);
 
-      // Imprimir usando lp (macOS/Linux)
+      // Usar comando apropiado según el sistema operativo
       let command: string;
       
-      if (this.printerName === 'default') {
-        command = `lp "${tempFile}"`;
+      if (this.isWindows) {
+        if (this.printerName === 'default') {
+          // En Windows, usar notepad /p para imprimir a la impresora por defecto
+          command = `notepad /p "${tempFile}"`;
+        } else {
+          // Para una impresora específica en Windows
+          command = `print /D:"${this.printerName}" "${tempFile}"`;
+        }
       } else {
-        command = `lp -d "${this.printerName}" "${tempFile}"`;
+        // En macOS/Linux usar lp
+        if (this.printerName === 'default') {
+          command = `lp "${tempFile}"`;
+        } else {
+          command = `lp -d "${this.printerName}" "${tempFile}"`;
+        }
       }
 
       await execAsync(command);
@@ -83,7 +118,7 @@ export class USBPrinter {
         } catch (e) {
           console.warn('No se pudo eliminar archivo temporal:', e);
         }
-      }, 1000);
+      }, 2000); // Mayor delay para Windows
 
     } catch (error) {
       throw new Error(`Error al imprimir por USB: ${error}`);
@@ -97,5 +132,9 @@ export class USBPrinter {
 
   getPrinterName(): string {
     return this.printerName;
+  }
+
+  getOperatingSystem(): string {
+    return this.isWindows ? 'Windows' : 'Unix/Linux/macOS';
   }
 }
