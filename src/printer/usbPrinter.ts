@@ -137,4 +137,35 @@ export class USBPrinter {
   getOperatingSystem(): string {
     return this.isWindows ? 'Windows' : 'Unix/Linux/macOS';
   }
+
+  // Método estático para obtener información detallada del sistema
+  static getSystemInfo() {
+    const platform = os.platform();
+    const isWindows = platform === 'win32';
+    
+    return {
+      platform: platform,
+      isWindows: isWindows,
+      architecture: os.arch(),
+      hostname: os.hostname(),
+      type: os.type(),
+      release: os.release(),
+      printingSupport: {
+        method: isWindows ? 'Windows Print Spooler' : 'CUPS',
+        commands: isWindows ? ['notepad /p', 'print /D:'] : ['lp', 'lpstat'],
+        tempDirectory: isWindows ? 'C:\\tmp' : '/tmp'
+      }
+    };
+  }
+
+  // Método estático para verificar si una impresora específica existe
+  static async isPrinterAvailable(printerName: string): Promise<boolean> {
+    try {
+      const printers = await this.getAvailablePrinters();
+      return printers.includes(printerName) || printerName === 'default';
+    } catch (error) {
+      console.warn('Error checking printer availability:', error);
+      return false;
+    }
+  }
 }

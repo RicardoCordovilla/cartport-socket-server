@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { printAirportTicket } from "./printer.controller";
 import { printPaymentTicket, getAvailableUSBPrinters } from "./tickets";
+import * as os from 'os';
 
 export const printTicket = (req: Request, res: Response) => {
   try {
@@ -70,6 +71,68 @@ export const getUSBPrinters = async (req: Request, res: Response) => {
     console.error("Error getting USB printers:", error);
     res.status(500).json({
       error: "Failed to get USB printers",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+// Nuevo endpoint para obtener información del sistema operativo
+export const getSystemInfo = (req: Request, res: Response) => {
+  try {
+    const platform = os.platform();
+    const isWindows = platform === 'win32';
+    const architecture = os.arch();
+    const hostname = os.hostname();
+    const osType = os.type();
+    const release = os.release();
+
+    res.json({
+      success: true,
+      system: {
+        platform: platform,
+        isWindows: isWindows,
+        architecture: architecture,
+        hostname: hostname,
+        type: osType,
+        release: release,
+        supportedPrinters: isWindows ? 'Windows Print Spooler' : 'CUPS (Common Unix Printing System)'
+      },
+    });
+  } catch (error) {
+    console.error("Error getting system info:", error);
+    res.status(500).json({
+      error: "Failed to get system information",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+// Nuevo endpoint para obtener información detallada de impresoras
+export const getPrintersDetailed = async (req: Request, res: Response) => {
+  try {
+    const printers = await getAvailableUSBPrinters();
+    const isWindows = os.platform() === 'win32';
+    
+    res.json({
+      success: true,
+      data: {
+        printers: printers,
+        count: printers.length,
+        system: {
+          platform: os.platform(),
+          isWindows: isWindows,
+          printingMethod: isWindows ? 'Windows Print Commands' : 'CUPS/lp Commands'
+        },
+        defaultPrinter: 'default',
+        availableCommands: isWindows 
+          ? ['notepad /p', 'print /D:']
+          : ['lp', 'lpstat']
+      },
+    });
+  } catch (error) {
+    console.error("Error getting detailed printer info:", error);
+    res.status(500).json({
+      error: "Failed to get detailed printer information",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
