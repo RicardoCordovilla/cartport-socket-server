@@ -4,34 +4,55 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as printer from 'printer';
 
 const execAsync = promisify(exec);
 
 interface USBPrinterOptions {
   printerName?: string; // Nombre de la impresora USB
+  useRawMode?: boolean; // Usar modo RAW para impresión directa
 }
 
 export class USBPrinter {
   private printerName: string;
   private isWindows: boolean;
+  private useRawMode: boolean;
 
   constructor(options: USBPrinterOptions = {}) {
     this.isWindows = os.platform() === 'win32';
     this.printerName = options.printerName || this.getDefaultPrinter();
+    this.useRawMode = options.useRawMode ?? true; // Por defecto usar modo RAW
   }
 
   private getDefaultPrinter(): string {
-    if (this.isWindows) {
-      return 'default'; // En Windows usaremos la impresora por defecto
-    } else {
-      return 'default'; // En macOS/Linux también
+    if (this.isWindows && this.useRawMode) {
+      // Intentar obtener la impresora por defecto usando el módulo printer
+      try {
+        const defaultPrinter = printer.getDefaultPrinterName();
+        return defaultPrinter || 'default';
+      } catch (error) {
+        console.warn('No se pudo obtener impresora por defecto:', error);
+        return 'default';
+      }
     }
+    return 'default';
   }
 
   static async getAvailablePrinters(): Promise<string[]> {
     const isWindows = os.platform() === 'win32';
     
     try {
+      // Intentar usar el módulo printer primero (mejor para modo RAW)
+      try {
+        const printers = printer.getPrinters();
+        if (printers && printers.length > 0) {
+          return printers.map(p => p.name);
+        }
+      } catch (printerError) {
+        console.warn('Error usando módulo printer:', printerError);
+      }
+
+      // Fallback a los métodos anteriores
       if (isWindows) {
         // En Windows usamos wmic para listar impresoras
         const { stdout } = await execAsync('wmic printer get name /format:csv');
@@ -67,7 +88,7 @@ export class USBPrinter {
       const printers = await USBPrinter.getAvailablePrinters();
       if (!printers.includes(this.printerName) && this.printerName !== 'default') {
         console.warn(`Impresora ${this.printerName} no encontrada, usando default`);
-        this.printerName = 'default';
+        this.printerName = this.getDefaultPrinter();
       }
     } catch (error) {
       console.warn('Error al verificar impresora:', error);
@@ -75,6 +96,41 @@ export class USBPrinter {
   }
 
   async write(data: Buffer | string): Promise<void> {
+    if (this.isWindows && this.useRawMode) {
+      return this.writeRaw(data);
+    } else {
+      return this.writeLegacy(data);
+    }
+  }
+
+  private async writeRaw(data: Buffer | string): Promise<void> {
+    try {
+      const printData = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
+      
+      // Usar el módulo printer para impresión RAW
+      printer.printDirect({
+        data: printData,
+        printer: this.printerName === 'default' ? printer.getDefaultPrinterName() : this.printerName,
+        type: 'RAW',
+        success: function(jobID: string) {
+          console.log('Trabajo de impresión enviado con ID:', jobID);
+        },
+        error: function(err: any) {
+          console.error('Error en impresión RAW:', err);
+          throw new Error(`Error en impresión RAW: ${err}`);
+        }
+      });
+
+      console.log('Comando de impresión RAW enviado correctamente');
+
+    } catch (error) {
+      console.error('Error en impresión RAW:', error);
+      // Fallback al método legacy si falla RAW
+      await this.writeLegacy(data);
+    }
+  }
+
+  private async writeLegacy(data: Buffer | string): Promise<void> {
     try {
       const printData = typeof data === 'string' ? data : data.toString();
       
@@ -136,6 +192,15 @@ export class USBPrinter {
 
   getOperatingSystem(): string {
     return this.isWindows ? 'Windows' : 'Unix/Linux/macOS';
+  }
+
+  isUsingRawMode(): boolean {
+    return this.useRawMode && this.isWindows;
+  }
+
+  // Método para cambiar entre modo RAW y legacy
+  setRawMode(enabled: boolean): void {
+    this.useRawMode = enabled;
   }
 
   // Método estático para obtener información detallada del sistema

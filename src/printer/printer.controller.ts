@@ -1,5 +1,12 @@
 import { SerialPrinter } from "./serialPrinter";
-import { printPaymentTicket, AirportTicketData } from "./tickets";
+import { 
+  printPaymentTicket, 
+  printPaymentTicketUSB,
+  AirportTicketData,
+  getPrintSystemInfo,
+  getAvailablePrinters,
+  isPrinterAvailable
+} from "./tickets";
 
 const ESC = "\x1B";
 const GS = "\x1D";
@@ -23,16 +30,93 @@ const ALIGN_LEFT = ESC + "a" + "\x00";    // Alineación izquierda
 const ALIGN_CENTER = ESC + "a" + "\x01";  // Alineación centrada
 const ALIGN_RIGHT = ESC + "a" + "\x02";   // Alineación derecha
 
-// Función principal que ahora usa el sistema unificado
+// Nueva función principal que usa modo RAW por defecto
 export async function printAirportTicket(
-  devicePath: string,
-  data: AirportTicketData
+  printerName?: string,
+  data?: AirportTicketData,
+  useRawMode: boolean = true
 ) {
-  // Usar el nuevo sistema unificado para impresión serial
-  return await printPaymentTicket(
-    { type: 'usb', devicePath },
-    data
-  );
+  if (!data) {
+    throw new Error('Datos del ticket son requeridos');
+  }
+
+  // Usar el nuevo sistema unificado con modo RAW
+  return await printPaymentTicketUSB(data, printerName, useRawMode);
+}
+
+// Nueva función para impresión con configuración avanzada
+export async function printTicketWithConfig(
+  data: AirportTicketData,
+  config: {
+    printerName?: string;
+    useRawMode?: boolean;
+    printerType?: 'usb' | 'serial';
+    devicePath?: string;
+  } = {}
+) {
+  const {
+    printerName,
+    useRawMode = true,
+    printerType = 'usb',
+    devicePath
+  } = config;
+
+  if (printerType === 'usb') {
+    return await printPaymentTicketUSB(data, printerName, useRawMode);
+  } else {
+    // Mantener compatibilidad con impresoras seriales
+    return await printPaymentTicket(data, {
+      type: 'serial',
+      devicePath: devicePath || '/dev/ttyUSB0'
+    });
+  }
+}
+
+// Función para obtener información del sistema de impresión
+export function getSystemPrintInfo() {
+  return getPrintSystemInfo();
+}
+
+// Función para listar impresoras disponibles
+export async function listAvailablePrinters(): Promise<string[]> {
+  return await getAvailablePrinters();
+}
+
+// Función para verificar disponibilidad de impresora
+export async function checkPrinterAvailability(printerName: string): Promise<boolean> {
+  return await isPrinterAvailable(printerName);
+}
+
+// Función de prueba para modo RAW
+export async function testRawPrinting(printerName?: string) {
+  const testData: AirportTicketData = {
+    companyName: "AEROPORTUARIA PRUEBA",
+    location: "TERMINAL INTERNACIONAL",
+    airportName: "AEROPUERTO TEST",
+    phoneNumber: "+1-800-TEST",
+    ticketNumber: "TEST001",
+    date: new Date().toLocaleDateString(),
+    time: new Date().toLocaleTimeString(),
+    serviceType: "ESTACIONAMIENTO",
+    subtotal: 10.00,
+    tax: 1.60,
+    taxRate: 16,
+    total: 11.60,
+    paid: 15.00,
+    change: 3.40,
+    changeError: 0.00,
+    website: "www.test-airport.com"
+  };
+
+  console.log('=== INFORMACIÓN DEL SISTEMA ===');
+  console.log(JSON.stringify(getSystemPrintInfo(), null, 2));
+
+  console.log('\n=== IMPRESORAS DISPONIBLES ===');
+  const printers = await listAvailablePrinters();
+  console.log(printers);
+
+  console.log('\n=== INICIANDO IMPRESIÓN DE PRUEBA ===');
+  return await printAirportTicket(printerName, testData, true);
 }
 
 // Función alternativa con formato personalizado (mantiene el formato original)
