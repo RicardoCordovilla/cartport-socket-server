@@ -5,70 +5,24 @@ import * as os from 'os';
 
 export const printTicket = (req: Request, res: Response) => {
   try {
-    const { devicePath, data, printerType = 'serial', printerName, vendorId, productId } = req.body;
-
-    // Validar según el tipo de impresora
-    if (printerType === 'serial' && !devicePath) {
-      return res.status(400).json({
-        error: "Device path is required for serial printing",
+    const { devicePath, data, printerType = 'usb', printerName, vendorId, productId } = req.body;
+    printPaymentTicket(
+      // { type: printerType, devicePath, printerName, vendorId, productId },
+      data
+    )
+      .then(() => {
+        res.json({
+          success: true,
+          message: "Ticket printed successfully",
+        });
+      })
+      .catch((error) => {
+        console.error("Error printing ticket:", error);
+        res.status(500).json({
+          error: "Failed to print ticket",
+          details: error.message,
+        });
       });
-    }
-
-    if (printerType === 'usb') {
-      // Para USB, usar la nueva función unificada
-      printPaymentTicket(
-        { type: 'usb', printerName },
-        data
-      )
-        .then(() => {
-          res.json({
-            success: true,
-            message: "Ticket printed successfully via USB",
-          });
-        })
-        .catch((error) => {
-          console.error("Error printing USB ticket:", error);
-          res.status(500).json({
-            error: "Failed to print USB ticket",
-            details: error.message,
-          });
-        });
-    } else if (printerType === 'escpos') {
-      // Para ESC/POS, usar la nueva función con corte real
-      printPaymentTicket(
-        { type: 'escpos', vendorId, productId },
-        data
-      )
-        .then(() => {
-          res.json({
-            success: true,
-            message: "Ticket printed successfully via ESC/POS with automatic cutting",
-          });
-        })
-        .catch((error) => {
-          console.error("Error printing ESC/POS ticket:", error);
-          res.status(500).json({
-            error: "Failed to print ESC/POS ticket",
-            details: error.message,
-          });
-        });
-    } else {
-      // Para serial, mantener funcionalidad existente
-      printAirportTicket(devicePath, data)
-        .then(() => {
-          res.json({
-            success: true,
-            message: "Airport ticket printed successfully via serial",
-          });
-        })
-        .catch((error) => {
-          console.error("Error printing serial ticket:", error);
-          res.status(500).json({
-            error: "Failed to print serial ticket",
-            details: error.message,
-          });
-        });
-    }
   } catch (error) {
     console.error("Error in printTicket service:", error);
     res.status(500).json({

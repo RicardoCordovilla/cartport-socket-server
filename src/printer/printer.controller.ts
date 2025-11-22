@@ -30,7 +30,7 @@ export async function printAirportTicket(
 ) {
   // Usar el nuevo sistema unificado para impresión serial
   return await printPaymentTicket(
-    { type: 'serial', devicePath },
+    { type: 'usb', devicePath },
     data
   );
 }

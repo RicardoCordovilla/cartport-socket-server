@@ -63,23 +63,145 @@ export async function getAvailableESCPOSPrinters(): Promise<Array<{name: string,
   return await ESCPOSPrinter.getAvailableESCPOSPrinters();
 }
 
+// Función para detectar el mejor tipo de impresora disponible
+export async function detectBestPrinterType(): Promise<{
+  type: PrinterType;
+  available: boolean;
+  config?: Partial<PrinterConfig>;
+  message: string;
+}> {
+  // Prioridad: ESC/POS (corte automático) > USB > Serial
+  
+  try {
+    // Intentar ESC/POS primero (mejor corte automático)
+    const escposPrinters = await getAvailableESCPOSPrinters();
+    if (escposPrinters.length > 0) {
+      return {
+        type: 'escpos',
+        available: true,
+        config: { 
+          type: 'escpos',
+          vendorId: escposPrinters[0].vendorId,
+          productId: escposPrinters[0].productId
+        },
+        message: `ESC/POS printer detected: ${escposPrinters[0].name} (corte automático disponible)`
+      };
+    }
+  } catch (error) {
+    console.warn('ESC/POS detection failed:', error instanceof Error ? error.message : error);
+  }
+
+  try {
+    // Intentar USB como segundo opción
+    const usbPrinters = await getAvailableUSBPrinters();
+    if (usbPrinters.length > 0) {
+      return {
+        type: 'usb',
+        available: true,
+        config: { 
+          type: 'usb',
+          printerName: usbPrinters[0]
+        },
+        message: `USB printer detected: ${usbPrinters[0]}`
+      };
+    }
+  } catch (error) {
+    console.warn('USB detection failed:', error instanceof Error ? error.message : error);
+  }
+
+  // Si no hay impresoras automáticamente detectables, sugerir serial
+  return {
+    type: 'serial',
+    available: false,
+    config: { type: 'serial', devicePath: process.platform === 'win32' ? 'COM1' : '/dev/ttyUSB0' },
+    message: 'No automatic printers detected. Serial connection available (requires manual configuration).'
+  };
+}
+
+// Función mejorada que intenta imprimir con detección automática y fallback
+export async function printPaymentTicketAuto(
+  data: TicketData,
+  preferredType?: PrinterType
+): Promise<{success: boolean, printerType: PrinterType, message: string}> {
+  
+  // Lista de tipos de impresora a intentar en orden de prioridad
+  const printerTypes: PrinterType[] = preferredType 
+    ? [preferredType, 'escpos', 'usb'] 
+    : ['escpos', 'usb'];
+  
+  let lastError: Error | null = null;
+  
+  for (const printerType of printerTypes) {
+    try {
+      console.log(`🖨️ Intentando imprimir con ${printerType.toUpperCase()}...`);
+      
+      let config: PrinterConfig;
+      
+      if (printerType === 'escpos') {
+        const escposPrinters = await getAvailableESCPOSPrinters();
+        if (escposPrinters.length === 0) {
+          throw new Error('No ESC/POS printers found');
+        }
+        config = { 
+          type: 'escpos',
+          vendorId: escposPrinters[0].vendorId,
+          productId: escposPrinters[0].productId
+        };
+      } else if (printerType === 'usb') {
+        const usbPrinters = await getAvailableUSBPrinters();
+        if (usbPrinters.length === 0) {
+          throw new Error('No USB printers found');
+        }
+        config = { 
+          type: 'usb',
+          printerName: usbPrinters[0]
+        };
+      } else {
+        // Para serial, usar configuración por defecto
+        config = { 
+          type: 'serial', 
+          devicePath: process.platform === 'win32' ? 'COM1' : '/dev/ttyUSB0' 
+        };
+      }
+      
+      await printPaymentTicket(data);
+      
+      return {
+        success: true,
+        printerType: printerType,
+        message: `Ticket impreso correctamente con ${printerType.toUpperCase()}`
+      };
+      
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn(`⚠️ Fallo ${printerType.toUpperCase()}: ${errorMsg}`);
+      lastError = error instanceof Error ? error : new Error(errorMsg);
+      
+      // Continúa con el siguiente tipo de impresora
+      continue;
+    }
+  }
+  
+  // Si llegamos aquí, todos los métodos fallaron
+  const errorMessage = lastError?.message?.includes('LIBUSB_ERROR_NOT_SUPPORTED')
+    ? 'Sistema no compatible con libusb. Verifique que tenga una impresora USB estándar conectada.'
+    : lastError?.message?.includes('No printers found')
+    ? 'No se encontraron impresoras disponibles. Conecte una impresora y reinicie la aplicación.'
+    : lastError?.message || 'Error desconocido de impresión';
+  
+  return {
+    success: false,
+    printerType: 'usb', // Tipo por defecto para errores
+    message: `Error de impresión: ${errorMessage}`
+  };
+}
+
 // Función unificada para imprimir tickets
 export async function printPaymentTicket(
-  config: PrinterConfig,
+  // config: PrinterConfig,
   data: TicketData
 ) {
-  if (config.type === 'serial') {
-    if (!config.devicePath) {
-      throw new Error('devicePath es requerido para impresión serial');
-    }
-    return await printPaymentTicketSerial(config.devicePath, data);
-  } else if (config.type === 'usb') {
-    return await printPaymentTicketUSB(data, config.printerName);
-  } else if (config.type === 'escpos') {
-    return await printPaymentTicketESCPOS(data, config.vendorId, config.productId);
-  } else {
-    throw new Error('Tipo de impresora no soportado');
-  }
+  printPaymentTicketUSB(data);
 }
 
 // Función específica para impresión serial (mantiene compatibilidad)
@@ -117,8 +239,8 @@ export async function printPaymentTicketUSB(
     
     await printer.write(ticketContent);
     // Para USB, agregamos comandos de corte estándar
-    await printer.write(Buffer.from([0x1d, 0x56, 0x01])); // Corte parcial
-    await printer.write("\n\n");
+    // await printer.write(Buffer.from([0x1d, 0x56])); // Corte completo
+    // await printer.write("\n\n");
   } finally {
     await printer.close();
   }
@@ -192,7 +314,6 @@ function generateTicketContent(data: TicketData): string {
 // Función para generar tickets de aeropuerto
 function generateAirportTicketContent(data: AirportTicketData): string {
   let buf = "";
-  buf += ESC + "@"; // init
   buf += `${data.companyName}\n`;
   buf += `${data.location}\n`;
   buf += `${data.airportName}\n`;

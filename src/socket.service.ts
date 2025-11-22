@@ -168,54 +168,29 @@ export function initializeSocketService(wss: WebSocketServer) {
               const paid = data.data.insertedAmount || total;
               const change = paid - total;
               
-              // Usar la nueva función unificada de impresión con ESC/POS para corte automático
-              printPaymentTicket(
-                { 
-                  type: 'escpos'  // Cambiar de 'usb' a 'escpos' para corte automático real
-                  // vendorId y productId se detectan automáticamente
-                },
-                {
-                  companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
-                  location: "AEROGERPSA S.A.\nVia a Tababela",
-                  airportName: "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
-                  phoneNumber: "022818462",
-                  ticketNumber: `A${Date.now().toString().slice(-9)}`, // Número único basado en timestamp
-                  date: new Date().toLocaleDateString('es-EC'),
-                  time: new Date().toLocaleTimeString('es-EC'),
-                  serviceType: "Coche Portaequipajes",
-                  subtotal: subtotal,
-                  tax: tax,
-                  taxRate: 15,
-                  total: total,
-                  paid: paid,
-                  change: change,
-                  changeError: 0.0,
-                  website: "www.aerogerpsa.com",
-                }
-              )
-                .then(() => {
-                  console.log("✅ Ticket impreso correctamente por USB");
-                  // Notificar a la webapp que la impresión fue exitosa
-                  broadcastJSON({
-                    event: "webapp:message",
-                    data: {
-                      type: "print_success",
-                      message: "Ticket impreso correctamente",
-                    },
-                  });
-                })
-                .catch((err) => {
-                  console.error("❌ Error imprimiendo ticket:", err);
-                  // Notificar a la webapp que hubo un error en la impresión
-                  broadcastJSON({
-                    event: "webapp:message",
-                    data: {
-                      type: "print_error",
-                      message: "Error al imprimir ticket",
-                      error: err.message,
-                    },
-                  });
-                });
+              // Preparar datos del ticket
+              const ticketData = {
+                companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
+                location: "AEROGERPSA S.A.\nVia a Tababela",
+                airportName: "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
+                phoneNumber: "022818462",
+                ticketNumber: `A${Date.now().toString().slice(-9)}`, // Número único basado en timestamp
+                date: new Date().toLocaleDateString('es-EC'),
+                time: new Date().toLocaleTimeString('es-EC'),
+                serviceType: "Coche Portaequipajes",
+                subtotal: subtotal,
+                tax: tax,
+                taxRate: 15,
+                total: total,
+                paid: paid,
+                change: change,
+                changeError: 0.0,
+                website: "www.aerogerpsa.com",
+              };
+
+              // Usar impresión automática con detección inteligente
+              console.log('🔍 Detectando impresora disponible...');
+              printPaymentTicket( ticketData)
             }
           }
         } else if (data.event === "esp32:message" || data.from === "esp32") {
