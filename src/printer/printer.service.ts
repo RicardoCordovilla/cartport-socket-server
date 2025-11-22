@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import { printAirportTicket } from "./printer.controller";
-import { printPaymentTicket, getAvailableUSBPrinters, getAvailableESCPOSPrinters } from "./tickets";
+import { printPaymentTicket } from "./tickets";
 import * as os from 'os';
 
 export const printTicket = (req: Request, res: Response) => {
@@ -32,42 +31,6 @@ export const printTicket = (req: Request, res: Response) => {
   }
 };
 
-// Nuevo endpoint para obtener impresoras USB disponibles
-export const getUSBPrinters = async (req: Request, res: Response) => {
-  try {
-    const printers = await getAvailableUSBPrinters();
-    res.json({
-      success: true,
-      printers,
-    });
-  } catch (error) {
-    console.error("Error getting USB printers:", error);
-    res.status(500).json({
-      error: "Failed to get USB printers",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
-
-// Nuevo endpoint para obtener impresoras ESC/POS disponibles
-export const getESCPOSPrinters = async (req: Request, res: Response) => {
-  try {
-    const printers = await getAvailableESCPOSPrinters();
-    res.json({
-      success: true,
-      printers,
-      count: printers.length,
-      message: "ESC/POS printers support automatic paper cutting"
-    });
-  } catch (error) {
-    console.error("Error getting ESC/POS printers:", error);
-    res.status(500).json({
-      error: "Failed to get ESC/POS printers",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
-
 // Nuevo endpoint para obtener información del sistema operativo
 export const getSystemInfo = (req: Request, res: Response) => {
   try {
@@ -94,68 +57,6 @@ export const getSystemInfo = (req: Request, res: Response) => {
     console.error("Error getting system info:", error);
     res.status(500).json({
       error: "Failed to get system information",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
-
-// Nuevo endpoint para obtener información detallada de impresoras
-export const getPrintersDetailed = async (req: Request, res: Response) => {
-  try {
-    const printers = await getAvailableUSBPrinters();
-    const isWindows = os.platform() === 'win32';
-    
-    res.json({
-      success: true,
-      data: {
-        printers: printers,
-        count: printers.length,
-        system: {
-          platform: os.platform(),
-          isWindows: isWindows,
-          printingMethod: isWindows ? 'Windows Print Commands' : 'CUPS/lp Commands'
-        },
-        defaultPrinter: 'default',
-        availableCommands: isWindows 
-          ? ['notepad /p', 'print /D:']
-          : ['lp', 'lpstat']
-      },
-    });
-  } catch (error) {
-    console.error("Error getting detailed printer info:", error);
-    res.status(500).json({
-      error: "Failed to get detailed printer information",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
-};
-
-// Endpoint mejorado para obtener todas las impresoras disponibles
-export const getAllPrinters = async (req: Request, res: Response) => {
-  try {
-    const [usbPrinters, escposPrinters] = await Promise.all([
-      getAvailableUSBPrinters(),
-      getAvailableESCPOSPrinters()
-    ]);
-
-    res.json({
-      success: true,
-      printers: {
-        usb: usbPrinters,
-        escpos: escposPrinters,
-        serial: ["Available via device path (e.g., COM1, /dev/ttyUSB0)"]
-      },
-      recommendations: {
-        windows: "Use ESC/POS for automatic paper cutting",
-        macos: "Use USB or ESC/POS for best compatibility",
-        linux: "All printer types supported"
-      },
-      currentPlatform: os.platform()
-    });
-  } catch (error) {
-    console.error("Error getting all printers:", error);
-    res.status(500).json({
-      error: "Failed to get printer information",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }
