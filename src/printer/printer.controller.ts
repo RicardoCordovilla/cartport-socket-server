@@ -243,13 +243,15 @@ export async function printAirportTicket(devicePath: string, data: AirportTicket
   const ticketContent = Buffer.concat([
     INIT,
     CENTER, DOUBLE,
-    Buffer.from(`${data.companyName}\n`, 'ascii'),
+    Buffer.from(`SERVICIOS DE GESTION\n`, 'ascii'),
+    Buffer.from(`AEROPORTUARIA\n`, 'ascii'),
     NORMAL,
     Buffer.from(`${data.location}\n`, 'ascii'),
     Buffer.from(`${data.airportName}\n`, 'ascii'),
     Buffer.from(`Tel: ${data.phoneNumber}\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
-    Buffer.from('      COMPROBANTE DE PAGO\n\n', 'ascii'),
+    CENTER,
+    Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
     
     LEFT,
     Buffer.from(`Monolito numero: ${data.ticketNumber.slice(-1)}\n`, 'ascii'),
@@ -279,10 +281,10 @@ export async function printAirportTicket(devicePath: string, data: AirportTicket
       Buffer.from(`     ${data.website}\n\n`, 'ascii')
     ] : []),
     
-    DOUBLE,
-    Buffer.from(`        TOTAL        ${data.total.toFixed(2)} $\n`, 'ascii'),
-    NORMAL,
-    Buffer.from('      (IVA Incluido)\n\n\n\n\n', 'ascii'),
+    CENTER,DOUBLE,
+    Buffer.from(`TOTAL: ${data.total.toFixed(2)} $\n`, 'ascii'),
+    CENTER,NORMAL,
+    Buffer.from('(IVA Incluido)\n\n\n\n\n', 'ascii'),
     CUT
   ]);
 
