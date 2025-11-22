@@ -1,26 +1,13 @@
-import { SerialPrinter } from "./serialPrinter";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs';
+import * as os from 'os';
 
-const ESC = "\x1B";
-const GS = "\x1D";
+const execAsync = promisify(exec);
 
-// Comandos para control de tamaño de fuente
-const FONT_SIZE_NORMAL = ESC + "!" + "\x00";  // Tamaño normal
-const FONT_SIZE_DOUBLE_WIDTH = ESC + "!" + "\x20";  // Doble ancho
-const FONT_SIZE_DOUBLE_HEIGHT = ESC + "!" + "\x10";  // Doble altura
-const FONT_SIZE_DOUBLE = ESC + "!" + "\x30";  // Doble ancho y altura
-const FONT_SIZE_LARGE = GS + "!" + "\x11";  // Tamaño grande (2x2)
-
-// Comandos para espaciado entre caracteres
-const CHAR_SPACING_NORMAL = ESC + " " + "\x00";  // Espaciado normal (0)
-const CHAR_SPACING_SMALL = ESC + " " + "\x01";   // Espaciado pequeño (1 punto)
-const CHAR_SPACING_MEDIUM = ESC + " " + "\x02";  // Espaciado medio (2 puntos)
-const CHAR_SPACING_LARGE = ESC + " " + "\x03";   // Espaciado grande (3 puntos)
-const CHAR_SPACING_XLARGE = ESC + " " + "\x05";  // Espaciado extra grande (5 puntos)
-
-// Comandos para alineación del texto
-const ALIGN_LEFT = ESC + "a" + "\x00";    // Alineación izquierda
-const ALIGN_CENTER = ESC + "a" + "\x01";  // Alineación centrada
-const ALIGN_RIGHT = ESC + "a" + "\x02";   // Alineación derecha
+// Comandos ESC/POS
+const ESC = 0x1B;
+const GS = 0x1D;
 
 interface AirportTicketData {
   companyName: string;
@@ -37,86 +24,267 @@ interface AirportTicketData {
   total: number;
   paid: number;
   change: number;
-  changeError: number;
+  changeError?: number;
   website?: string;
 }
 
-export async function printAirportTicket(
-  devicePath: string,
-  data: AirportTicketData
-) {
-  const printer = new SerialPrinter({ path: devicePath, baudRate: 115200 });
+async function printRawData(printerName: string, data: Buffer): Promise<void> {
+  // Verificar si estamos en macOS y usar CUPS en su lugar
+  if (process.platform === 'darwin') {
+    return await printWithCUPS(printerName, data);
+  }
 
-  try {
-    await printer.open();
-    let buf = "";
-    buf += ESC + "@"; // init
+  // Código original para Windows
+  const tmpDir = os.tmpdir();
+  const scriptPath = `${tmpDir}\\print_raw_${Date.now()}.ps1`;
+  
+  const psScript = `
+Add-Type -TypeDefinition @"
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
 
-    // Header
-    buf += CHAR_SPACING_SMALL;
-    buf += ALIGN_CENTER;
-    buf += `${data.companyName}\n`;
-    buf += `${data.location}\n\n`;
-
-    buf += `${data.airportName}\n\n`;
-
-    buf += `TELEFONO DE ATENCION: ${data.phoneNumber}\n`;
-    buf += "--------------------------------\n";
-    buf += "      COMPROBANTE DE PAGO\n\n";
-
-    // Ticket details
-    buf += CHAR_SPACING_NORMAL;
-    buf += ALIGN_LEFT;
-    buf += `Monolito numero : ${data.ticketNumber.slice(-1)}\n`;
-    buf += `Fecha : ${data.date}         ${data.time}\n`;
-    buf += `Num de tiquet : ${data.ticketNumber}\n\n`;
-
-    // Service and amounts
-    buf += CHAR_SPACING_MEDIUM;
-    buf += ALIGN_LEFT;
-    buf += `Por utilizacion ${data.serviceType}\n`;
-    buf += `TOTAL GRABADO           ${data.subtotal.toFixed(2)} $\n`;
-    buf += `IVA   ${data.taxRate}%                ${data.tax.toFixed(2)} $\n`;
-    buf += `TOTAL                   ${data.total.toFixed(2)} $\n`;
-    buf += "--------------------------------\n";
-
-    // Payment details
-    buf += CHAR_SPACING_LARGE;
-    buf += ALIGN_LEFT;
-    buf += `Pagado:                 ${data.paid.toFixed(2)} $\n`;
-    buf += `Cambio:                 ${data.change.toFixed(2)} $\n`;
-    buf += `Error de cambio:        ${data.changeError.toFixed(2)} $\n`;
-    buf += "--------------------------------\n";
-
-    buf += CHAR_SPACING_NORMAL;
-    buf += ALIGN_CENTER;
-    buf += "DOCUMENTO SIN VALOR TRIBUTARIO\n\n";
-
-    if (data.website) {
-      buf += CHAR_SPACING_SMALL;
-      buf += ALIGN_CENTER;
-      buf += "SI DESEA FACTURA INGRESAR A ESTE LINK:\n";
-      buf += `     ${data.website}\n\n`;
+public class RawPrinterHelper {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public class DOCINFOA {
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pDocName;
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPStr)]
+        public string pDataType;
     }
 
-    buf += CHAR_SPACING_XLARGE;
-    buf += ALIGN_CENTER;
-    buf += `        TOTAL        ${data.total.toFixed(2)} $\n`;
-    buf += "      (IVA Incluido)\n\n\n\n\n";
+    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
-    // Enviar el contenido principal primero
-    await printer.write(buf);
+    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool ClosePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool StartDocPrinter(IntPtr hPrinter, Int32 level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
+
+    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool EndDocPrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool StartPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool EndPagePrinter(IntPtr hPrinter);
+
+    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, Int32 dwCount, out Int32 dwWritten);
+
+    public static bool SendBytesToPrinter(string szPrinterName, byte[] pBytes) {
+        Int32 dwError = 0, dwWritten = 0;
+        IntPtr hPrinter = new IntPtr(0);
+        DOCINFOA di = new DOCINFOA();
+        bool bSuccess = false;
+
+        di.pDocName = "RAW Document";
+        di.pDataType = "RAW";
+
+        if (OpenPrinter(szPrinterName.Normalize(), out hPrinter, IntPtr.Zero)) {
+            if (StartDocPrinter(hPrinter, 1, di)) {
+                if (StartPagePrinter(hPrinter)) {
+                    IntPtr pUnmanagedBytes = Marshal.AllocCoTaskMem(pBytes.Length);
+                    Marshal.Copy(pBytes, 0, pUnmanagedBytes, pBytes.Length);
+                    bSuccess = WritePrinter(hPrinter, pUnmanagedBytes, pBytes.Length, out dwWritten);
+                    Marshal.FreeCoTaskMem(pUnmanagedBytes);
+                    EndPagePrinter(hPrinter);
+                }
+                EndDocPrinter(hPrinter);
+            }
+            ClosePrinter(hPrinter);
+        }
+
+        if (!bSuccess) {
+            dwError = Marshal.GetLastWin32Error();
+        }
+
+        return bSuccess;
+    }
+}
+"@
+
+$printerName = "${printerName}"
+$bytes = @(${Array.from(data).join(',')})
+
+$result = [RawPrinterHelper]::SendBytesToPrinter($printerName, $bytes)
+
+if ($result) {
+    Write-Output "SUCCESS"
+} else {
+    Write-Error "Failed to print"
+    exit 1
+}
+`;
+
+  try {
+    fs.writeFileSync(scriptPath, psScript, 'utf8');
     
-    // Esperar un momento para que la impresión termine
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Añadir líneas adicionales antes del corte
-    await printer.write("\n\n\n");
-    
-    const cut = Buffer.from([0x1d, 0x56, 0x01]);
-    await printer.write(cut);
-    await printer.write("\n\n");
+    const { stdout, stderr } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`, {
+      encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 30000
+    });
+
+    if (stdout.includes('SUCCESS')) {
+      console.log('✅ Impresión exitosa');
+      return;
+    }
+
+    if (stderr) {
+      throw new Error(stderr);
+    }
+  } catch (error: any) {
+    throw new Error(`Error al imprimir: ${error.message}`);
   } finally {
-    await printer.close();
+    try {
+      if (fs.existsSync(scriptPath)) {
+        fs.unlinkSync(scriptPath);
+      }
+    } catch (e) {
+      // Ignorar errores de limpieza
+    }
   }
+}
+
+async function printWithCUPS(printerName: string, data: Buffer): Promise<void> {
+  const tmpDir = os.tmpdir();
+  const dataPath = `${tmpDir}/print_data_${Date.now()}.bin`;
+  
+  try {
+    // Escribir datos binarios a archivo temporal
+    fs.writeFileSync(dataPath, data);
+    
+    // Usar lp para imprimir datos RAW
+    const { stdout, stderr } = await execAsync(`lp -d "${printerName}" -o raw "${dataPath}"`, {
+      encoding: 'utf8',
+      timeout: 30000
+    });
+
+    console.log('✅ Impresión enviada a CUPS');
+    
+  } catch (error: any) {
+    throw new Error(`Error al imprimir con CUPS: ${error.message}`);
+  } finally {
+    try {
+      if (fs.existsSync(dataPath)) {
+        fs.unlinkSync(dataPath);
+      }
+    } catch (e) {
+      // Ignorar errores de limpieza
+    }
+  }
+}
+
+async function listPrinters(): Promise<string[]> {
+  try {
+    if (process.platform === 'darwin') {
+      // En macOS usar lpstat
+      const { stdout } = await execAsync('lpstat -p | grep printer');
+      const lines = stdout.split('\n').filter(line => line.trim());
+      return lines.map(line => {
+        const match = line.match(/printer (\S+)/);
+        return match ? match[1] : '';
+      }).filter(name => name);
+    } else {
+      // En Windows usar wmic
+      const { stdout } = await execAsync('wmic printer get name /format:csv');
+      const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
+      return lines
+        .map(line => {
+          const parts = line.split(',');
+          return parts[parts.length - 1]?.trim();
+        })
+        .filter(name => name && name !== '');
+    }
+  } catch (error) {
+    console.error('Error listando impresoras:', error);
+    return [];
+  }
+}
+
+export async function printAirportTicket(devicePath: string, data: AirportTicketData): Promise<void> {
+  console.log('=== Iniciando impresión de ticket ===');
+  
+  const printers = await listPrinters();
+  
+  if (printers.length === 0) {
+    throw new Error('No se encontraron impresoras disponibles');
+  }
+  
+  console.log('Impresoras disponibles:', printers);
+  
+  // Buscar impresora BIXOLON o usar la primera disponible
+  let targetPrinter = printers.find(p => 
+    p.toLowerCase().includes('bixolon') || 
+    p.toLowerCase().includes('bk3')
+  );
+  
+  if (!targetPrinter) {
+    console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
+    targetPrinter = printers[0];
+  }
+  
+  console.log(`✅ Usando impresora: ${targetPrinter}`);
+  
+  // Comandos ESC/POS
+  const INIT = Buffer.from([ESC, 0x40]);
+  const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
+  const DOUBLE = Buffer.from([ESC, 0x21, 0x30]);
+  const CENTER = Buffer.from([ESC, 0x61, 0x01]);
+  const LEFT = Buffer.from([ESC, 0x61, 0x00]);
+  const CUT = Buffer.from([GS, 0x56, 0x00]);
+
+  // Crear contenido del ticket
+  const ticketContent = Buffer.concat([
+    INIT,
+    CENTER, DOUBLE,
+    Buffer.from(`${data.companyName}\n`, 'ascii'),
+    NORMAL,
+    Buffer.from(`${data.location}\n`, 'ascii'),
+    Buffer.from(`${data.airportName}\n`, 'ascii'),
+    Buffer.from(`Tel: ${data.phoneNumber}\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from('      COMPROBANTE DE PAGO\n\n', 'ascii'),
+    
+    LEFT,
+    Buffer.from(`Monolito numero: ${data.ticketNumber.slice(-1)}\n`, 'ascii'),
+    Buffer.from(`Fecha: ${data.date}         ${data.time}\n`, 'ascii'),
+    Buffer.from(`Num de tiquet: ${data.ticketNumber}\n\n`, 'ascii'),
+    
+    Buffer.from(`Por utilizacion ${data.serviceType}\n`, 'ascii'),
+    Buffer.from(`TOTAL GRABADO           ${data.subtotal.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`IVA   ${data.taxRate}%                ${data.tax.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`TOTAL                   ${data.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    
+    Buffer.from(`Pagado:                 ${data.paid.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`Cambio:                 ${data.change.toFixed(2)} $\n`, 'ascii'),
+    
+    ...(data.changeError !== undefined ? [
+      Buffer.from(`Error de cambio:        ${data.changeError.toFixed(2)} $\n`, 'ascii')
+    ] : []),
+    
+    Buffer.from('--------------------------------\n', 'ascii'),
+    
+    CENTER,
+    Buffer.from('DOCUMENTO SIN VALOR TRIBUTARIO\n\n', 'ascii'),
+    
+    ...(data.website ? [
+      Buffer.from('SI DESEA FACTURA INGRESAR A ESTE LINK:\n', 'ascii'),
+      Buffer.from(`     ${data.website}\n\n`, 'ascii')
+    ] : []),
+    
+    DOUBLE,
+    Buffer.from(`        TOTAL        ${data.total.toFixed(2)} $\n`, 'ascii'),
+    NORMAL,
+    Buffer.from('      (IVA Incluido)\n\n\n\n\n', 'ascii'),
+    CUT
+  ]);
+
+  await printRawData(targetPrinter, ticketContent);
 }

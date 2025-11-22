@@ -16,7 +16,7 @@ interface MessageData {
   data?: {
     type?: string;
     method?: string;
-    totalPrice: number;
+    totalPrice?: number;
     cartQuantity?: number;
     [key: string]: any;
   };
@@ -65,6 +65,19 @@ export function initializeSocketService(wss: WebSocketServer) {
           console.log("📱 Mensaje desde webapp:", data);
           if (data.data) {
             if (data.data.type === "navigate" && data.data.method === "card") {
+              // Validar que totalPrice esté presente
+              if (!data.data.totalPrice || data.data.totalPrice <= 0) {
+                console.error("❌ totalPrice es requerido para pagos con tarjeta");
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "card_payment_error",
+                    message: "Monto de pago requerido",
+                  },
+                });
+                return;
+              }
+
               // Obtener configuración actual del PinPad
               const config = getPinpadConfig();
               
@@ -76,16 +89,16 @@ export function initializeSocketService(wss: WebSocketServer) {
                   data: {
                     type: "card_payment_error",
                     message: "Configuración del PinPad incompleta",
-                    totalPrice: 0,
                   },
                 });
                 return;
               }
 
+              const totalPrice = data.data.totalPrice;
               const params = {
-                monto: data.data.totalPrice,
-                montoBaseIva: data.data.totalPrice * 0.15,
-                montoBaseNoIva: data.data.totalPrice * 0.15,
+                monto: totalPrice,
+                montoBaseIva: totalPrice * 0.15,
+                montoBaseNoIva: totalPrice * 0.15,
                 iva: 15,
                 mid: config.merchantData.mid,
                 tid: config.merchantData.tid,
@@ -104,7 +117,6 @@ export function initializeSocketService(wss: WebSocketServer) {
                     event: "webapp:message",
                     data: {
                       type: "card_payment_success",
-                      totalPrice: 0,
                     },
                   });
                 }
@@ -116,7 +128,6 @@ export function initializeSocketService(wss: WebSocketServer) {
                     event: "webapp:message",
                     data: {
                       type: "card_payment_error",
-                      totalPrice: 0,
                     },
                   });
                 }
@@ -127,26 +138,47 @@ export function initializeSocketService(wss: WebSocketServer) {
                   data: {
                     type: "card_payment_error",
                     message: "Error de comunicación con PinPad",
-                    totalPrice: 0,
                   },
                 });
               });
             }
 
             if (data.data.type === "print_ticket") {
+              // Validar que totalPrice esté presente
+              if (!data.data.totalPrice || data.data.totalPrice <= 0) {
+                console.error("❌ totalPrice es requerido para impresión");
+                broadcastJSON({
+                  event: "webapp:message",
+                  data: {
+                    type: "print_error",
+                    message: "Monto total requerido para imprimir ticket",
+                  },
+                });
+                return;
+              }
+
               const total = data.data.totalPrice;
               const subtotal = parseFloat((total / 1.15).toFixed(2));
               const tax = parseFloat((total - subtotal).toFixed(2));
               const paid = data.data.insertedAmount || total;
               const change = paid - total;
-              printAirportTicket("/dev/tty.usbserial-110", {
+
+              console.log('🖨️ Iniciando impresión de ticket:', {
+                total,
+                subtotal,
+                tax,
+                paid,
+                change
+              });
+
+              printAirportTicket("", {
                 companyName: "SERVICIOS DE GESTION AEROPORTUARIA",
                 location: "Quito - Ecuador",
                 airportName: "Aeropuerto Quito Mariscal Sucre",
                 phoneNumber: "123-456-7890",
                 ticketNumber: "A123456789",
-                date: "2025-11-12",
-                time: "14:30",
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('es-EC', { hour12: false }),
                 serviceType: "Coche Portaequipajes",
                 subtotal: subtotal,
                 tax: tax,
@@ -159,9 +191,35 @@ export function initializeSocketService(wss: WebSocketServer) {
               })
                 .then(() => {
                   console.log("✅ Ticket impreso correctamente");
+                  
+                  // Enviar confirmación de éxito al cliente
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "print_success",
+                      message: "Ticket impreso correctamente",
+                      ticketData: {
+                        total: total,
+                        subtotal: subtotal,
+                        tax: tax,
+                        paid: paid,
+                        change: change
+                      }
+                    },
+                  });
                 })
                 .catch((err) => {
                   console.error("❌ Error imprimiendo ticket:", err);
+                  
+                  // Enviar mensaje de error al cliente
+                  broadcastJSON({
+                    event: "webapp:message",
+                    data: {
+                      type: "print_error",
+                      message: `Error al imprimir ticket: ${err.message}`,
+                      error: err.message
+                    },
+                  });
                 });
             }
           }
