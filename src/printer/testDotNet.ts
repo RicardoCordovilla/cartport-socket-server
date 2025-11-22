@@ -132,19 +132,61 @@ if ($result) {
 
 async function listPrinters(): Promise<string[]> {
   try {
-    const { stdout } = await execAsync('wmic printer get name /format:csv');
-    const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
-    const printers = lines
-      .map(line => {
-        const parts = line.split(',');
-        return parts[parts.length - 1]?.trim();
-      })
+    // Usar PowerShell en lugar de wmic (que está deprecado)
+    const { stdout } = await execAsync('powershell "Get-Printer | Select-Object -ExpandProperty Name"', {
+      encoding: 'utf8',
+      timeout: 10000
+    });
+    
+    const printers = stdout
+      .split('\n')
+      .map(line => line.trim())
       .filter(name => name && name !== '');
     
+    console.log('🖨️ Impresoras encontradas con PowerShell:', printers);
     return printers;
   } catch (error) {
-    console.error('Error listando impresoras:', error);
-    return [];
+    console.error('❌ Error con Get-Printer, intentando con WMI...');
+    
+    try {
+      // Fallback usando WMI con PowerShell
+      const { stdout } = await execAsync('powershell "Get-WmiObject -Class Win32_Printer | Select-Object -ExpandProperty Name"', {
+        encoding: 'utf8',
+        timeout: 10000
+      });
+      
+      const printers = stdout
+        .split('\n')
+        .map(line => line.trim())
+        .filter(name => name && name !== '');
+      
+      console.log('🖨️ Impresoras encontradas con WMI:', printers);
+      return printers;
+    } catch (wmiError) {
+      console.error('❌ Error con WMI, intentando con wmic...');
+      
+      try {
+        // Último recurso: intentar wmic (para compatibilidad con versiones antiguas)
+        const { stdout } = await execAsync('wmic printer get name /format:csv', {
+          encoding: 'utf8',
+          timeout: 10000
+        });
+        
+        const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
+        const printers = lines
+          .map(line => {
+            const parts = line.split(',');
+            return parts[parts.length - 1]?.trim();
+          })
+          .filter(name => name && name !== '');
+        
+        console.log('🖨️ Impresoras encontradas con wmic:', printers);
+        return printers;
+      } catch (wmicError) {
+        console.error('❌ Todos los métodos fallaron:', wmicError);
+        return [];
+      }
+    }
   }
 }
 
