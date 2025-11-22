@@ -97,24 +97,24 @@ function generateTicketContent(data: TicketData): string {
 function generateAirportTicketContent(data: AirportTicketData): string {
   let buf = "";
   buf += `${data.companyName}\n`;
-  buf += `${data.location}\n`;
-  buf += `${data.airportName}\n`;
-  buf += `Tel: ${data.phoneNumber}\n`;
-  buf += "------------------------\n";
-  buf += `Ticket: ${data.ticketNumber}\n`;
-  buf += `Fecha: ${data.date}\n`;
-  buf += `Hora: ${data.time}\n`;
-  buf += "------------------------\n";
-  buf += `Servicio: ${data.serviceType}\n`;
-  buf += `Subtotal: $${data.subtotal.toFixed(2)}\n`;
-  buf += `IVA (${data.taxRate}%): $${data.tax.toFixed(2)}\n`;
-  buf += `TOTAL: $${data.total.toFixed(2)}\n`;
-  buf += "------------------------\n";
-  buf += `Recibido: $${data.paid.toFixed(2)}\n`;
-  buf += `Cambio: $${data.change.toFixed(2)}\n`;
-  buf += "------------------------\n";
-  buf += `${data.website}\n`;
-  buf += "Gracias por su preferencia\n\n\n";
+  // buf += `${data.location}\n`;
+  // buf += `${data.airportName}\n`;
+  // buf += `Tel: ${data.phoneNumber}\n`;
+  // buf += "------------------------\n";
+  // buf += `Ticket: ${data.ticketNumber}\n`;
+  // buf += `Fecha: ${data.date}\n`;
+  // buf += `Hora: ${data.time}\n`;
+  // buf += "------------------------\n";
+  // buf += `Servicio: ${data.serviceType}\n`;
+  // buf += `Subtotal: $${data.subtotal.toFixed(2)}\n`;
+  // buf += `IVA (${data.taxRate}%): $${data.tax.toFixed(2)}\n`;
+  // buf += `TOTAL: $${data.total.toFixed(2)}\n`;
+  // buf += "------------------------\n";
+  // buf += `Recibido: $${data.paid.toFixed(2)}\n`;
+  // buf += `Cambio: $${data.change.toFixed(2)}\n`;
+  // buf += "------------------------\n";
+  // buf += `${data.website}\n`;
+  // buf += "Gracias por su preferencia\n\n\n";
   return buf;
 }
 
