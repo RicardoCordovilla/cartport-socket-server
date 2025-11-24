@@ -15,6 +15,7 @@ interface AirportTicketData {
   airportName: string;
   phoneNumber: string;
   ticketNumber: string;
+  stationNumber: string;
   date: string;
   time: string;
   serviceType: string;
@@ -251,7 +252,7 @@ async function listPrinters(): Promise<string[]> {
   }
 }
 
-export async function printAirportTicket(devicePath: string, data: AirportTicketData): Promise<void> {
+export async function printAirportTicket( data: AirportTicketData): Promise<void> {
   console.log('=== Iniciando impresión de ticket ===');
   
   const printers = await listPrinters();
@@ -298,7 +299,7 @@ export async function printAirportTicket(devicePath: string, data: AirportTicket
     Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
     
     LEFT,
-    Buffer.from(`Monolito numero: ${data.ticketNumber.slice(-1)}\n`, 'ascii'),
+    Buffer.from(`Monolito numero: ${data.stationNumber}\n`, 'ascii'),
     Buffer.from(`Fecha: ${data.date}         ${data.time}\n`, 'ascii'),
     Buffer.from(`Num de tiquet: ${data.ticketNumber}\n\n`, 'ascii'),
     

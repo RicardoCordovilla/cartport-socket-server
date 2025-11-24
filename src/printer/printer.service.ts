@@ -3,15 +3,10 @@ import { printAirportTicket } from "./printer.controller";
 
 export const printTicket = (req: Request, res: Response) => {
   try {
-    const { devicePath, data } = req.body;
+    const { data } = req.body;
 
-    if (!devicePath) {
-      return res.status(400).json({
-        error: "Device path is required",
-      });
-    }
 
-    printAirportTicket(devicePath, data)
+    printAirportTicket(data)
       .then(() => {
         res.json({
           success: true,
@@ -45,6 +40,7 @@ export const printTest = async (req: Request, res: Response) => {
       airportName: "Aeropuerto Quito Mariscal Sucre",
       phoneNumber: "123-456-7890",
       ticketNumber: "TEST123456789",
+      stationNumber: "01",
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString('es-EC', { hour12: false }),
       serviceType: "Coche Portaequipajes - TEST",
@@ -58,7 +54,7 @@ export const printTest = async (req: Request, res: Response) => {
       website: "www.aerogerpsa.com"
     };
 
-    await printAirportTicket("", testData);
+    await printAirportTicket( testData);
     
     console.log('✅ Test de impresión completado exitosamente');
     
