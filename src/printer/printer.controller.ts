@@ -287,13 +287,13 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
   // Crear contenido del ticket
   const ticketContent = Buffer.concat([
     INIT,
-    CENTER, DOUBLE,
+    CENTER,
     Buffer.from(`SERVICIOS DE GESTION\n`, 'ascii'),
-    Buffer.from(`AEROPORTUARIA\n`, 'ascii'),
+    Buffer.from(`AEROPORTUARIA S.A.\n`, 'ascii'),
     NORMAL,
-    Buffer.from(`${data.location}\n`, 'ascii'),
-    Buffer.from(`${data.airportName}\n`, 'ascii'),
-    Buffer.from(`Tel: ${data.phoneNumber}\n`, 'ascii'),
+    Buffer.from(`Vía a Tababela\n`, 'ascii'),
+    Buffer.from(`AEROPUERTO INT. MARISCAL SUCRE - QUITO\n`, 'ascii'),
+    Buffer.from(`Telefono de atención: ${data.phoneNumber}\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
     CENTER,
     Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
