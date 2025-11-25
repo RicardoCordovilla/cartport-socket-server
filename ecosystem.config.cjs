@@ -1,0 +1,35 @@
+module.exports = {
+  apps: [
+    {
+      name: "socket-server",
+      script: "C://socket/dist/index.js",
+      watch: false,
+      instances: 1,
+      autorestart: true,
+      exec_mode: "fork",
+      max_memory_restart: "1G",
+      restart_delay: 5000,
+    },
+    {
+      name: "api-server",
+      script: "C://server-api/dist/index.js",
+      watch: false,
+      instances: 1,
+      autorestart: true,
+      exec_mode: "fork",
+      max_memory_restart: "1G",
+      restart_delay: 5000,
+    },
+    {
+      name: "app-nuc",
+      script: "cmd.exe",
+      args: ["/c", "cd /d C:\\localweb && npm run preview"],
+      watch: false,
+      instances: 1,
+      autorestart: true,
+      exec_mode: "fork",
+      max_memory_restart: "1G",
+      restart_delay: 5000,
+    },
+  ],
+};
