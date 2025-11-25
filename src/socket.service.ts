@@ -1,9 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
-import { parsePaymentResponse, sendToPinPad } from "./pinpad/utils/funtions";
-import { buildPaymentFrame } from "./pinpad/pinpad.controller";
-import { getPinpadConfig } from "./pinpad/pinpad.config";
-import { printAirportTicket } from "./printer/printer.controller";
 
 interface WebSocketWithId extends WebSocket {
   id?: string;
@@ -14,10 +10,6 @@ interface MessageData {
   event?: string;
   from?: string;
   data?: {
-    type?: string;
-    method?: string;
-    totalPrice?: number;
-    cartQuantity?: number;
     [key: string]: any;
   };
 }
@@ -63,86 +55,6 @@ export function initializeSocketService(wss: WebSocketServer) {
         // Log based on message type or source
         if (data.event === "webapp:message") {
           console.log("📱 Mensaje desde webapp:", data);
-          if (data.data) {
-            if (data.data.type === "navigate" && data.data.method === "card") {
-              // Validar que totalPrice esté presente
-              if (!data.data.totalPrice || data.data.totalPrice <= 0) {
-                console.error("❌ totalPrice es requerido para pagos con tarjeta");
-                broadcastJSON({
-                  event: "webapp:message",
-                  data: {
-                    type: "card_payment_error",
-                    message: "Monto de pago requerido",
-                  },
-                });
-                return;
-              }
-
-              // Obtener configuración actual del PinPad
-              const config = getPinpadConfig();
-              
-              // Verificar que la configuración esté completa
-              if (!config.merchantData.mid || !config.merchantData.tid || !config.securityData) {
-                console.error("❌ Configuración del PinPad incompleta");
-                broadcastJSON({
-                  event: "webapp:message",
-                  data: {
-                    type: "card_payment_error",
-                    message: "Configuración del PinPad incompleta",
-                  },
-                });
-                return;
-              }
-
-              const totalPrice = data.data.totalPrice;
-              const params = {
-                monto: totalPrice,
-                montoBaseIva: totalPrice * 0.15,
-                montoBaseNoIva: totalPrice * 0.15,
-                iva: 15,
-                mid: config.merchantData.mid,
-                tid: config.merchantData.tid,
-                cid: "CAJA01",
-                numeroFactura: "1233454",
-              };
-              const frame = buildPaymentFrame(params);
-              sendToPinPad(frame).then((response) => {
-                const parsedResponse = parsePaymentResponse(response);
-                console.log("Respuesta del PinPad:", parsedResponse.data);
-                if (
-                  parsedResponse.data.codigoRespuesta === "00" &&
-                  parsedResponse.data.mensajeRespuesta.includes("APROBADA")
-                ) {
-                  broadcastJSON({
-                    event: "webapp:message",
-                    data: {
-                      type: "card_payment_success",
-                    },
-                  });
-                }
-                if (
-                  parsedResponse.data.codigoRespuesta === "00" &&
-                  parsedResponse.data.mensajeRespuesta.includes("RECHAZADA")
-                ) {
-                  broadcastJSON({
-                    event: "webapp:message",
-                    data: {
-                      type: "card_payment_error",
-                    },
-                  });
-                }
-              }).catch((error) => {
-                console.error("❌ Error en comunicación con PinPad:", error);
-                broadcastJSON({
-                  event: "webapp:message",
-                  data: {
-                    type: "card_payment_error",
-                    message: "Error de comunicación con PinPad",
-                  },
-                });
-              });
-            }
-          }
         } else if (data.event === "esp32:message" || data.from === "esp32") {
           console.log("📡 Mensaje desde ESP32:", data);
         }
