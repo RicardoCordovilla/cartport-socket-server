@@ -182,3 +182,65 @@ Los valores que tenías en `.env` eran:
 - `SECURITY_LL=B12D3D63069BD9EB05B7BBEEAA228ABC`
 
 Ahora los configuras vía HTTP según se muestra arriba.
+
+## ARRANCAR PM2
+### Comandos Básicos para PM2
+
+#### Iniciar el Servidor
+```bash
+pm2 start ecosystem.config.js
+```
+
+#### Ver el Estado de las Aplicaciones
+```bash
+pm2 status
+```
+
+#### Reiniciar el Servidor
+```bash
+pm2 restart ecosystem.config.js
+```
+
+#### Detener el Servidor
+```bash
+pm2 stop ecosystem.config.js
+```
+
+#### Eliminar el Servidor de PM2
+```bash
+pm2 delete ecosystem.config.js
+```
+
+#### Guardar la Configuración de PM2
+```bash
+pm2 save
+```
+
+#### Cargar la Configuración Guardada al Reiniciar
+```bash
+pm2 resurrect
+```
+
+### Archivo `ecosystem.config.js`
+
+Ejemplo de configuración básica:
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: "socket-server",
+      script: "server.js",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "1G",
+      env: {
+        NODE_ENV: "development"
+      },
+      env_production: {
+        NODE_ENV: "production"
+      }
+    }
+  ]
+};
+```
