@@ -35,6 +35,12 @@ interface FillTicketData {
   amount: number;
 }
 
+interface CoinEmptyTicketData {
+  stationId: number;
+  date: string;
+  amount: number;
+}
+
 async function printRawData(printerName: string, data: Buffer): Promise<void> {
   // Verificar si estamos en macOS y usar CUPS en su lugar
   if (process.platform === 'darwin') {
@@ -65,22 +71,22 @@ public class RawPrinterHelper {
     [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
-    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool ClosePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool StartDocPrinter(IntPtr hPrinter, Int32 level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
 
-    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool EndDocPrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool StartPagePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool EndPagePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, Int32 dwCount, out Int32 dwWritten);
 
     public static bool SendBytesToPrinter(string szPrinterName, byte[] pBytes) {
@@ -398,6 +404,72 @@ export async function printFillTicket(data: FillTicketData): Promise<void> {
     Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`LLENADO DEL HOPPER     : ${data.amount.toFixed(2).padStart(8)} $\n`, 'ascii'),
+
+    Buffer.from('\n\n\n\n\n', 'ascii'),
+    CUT
+  ]);
+
+  await printRawData(targetPrinter, ticketContent);
+}
+
+export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<void> {
+  console.log('=== Iniciando impresión de ticket de vaciado de monedas ===');
+
+  const printers = await listPrinters();
+
+  if (printers.length === 0) {
+    throw new Error('No se encontraron impresoras disponibles');
+  }
+
+  console.log('Impresoras disponibles:', printers);
+
+  // Buscar impresora BIXOLON o usar la primera disponible
+  let targetPrinter = printers.find(p =>
+      p.toLowerCase().includes('bixolon') ||
+      p.toLowerCase().includes('bk3')
+  );
+
+  if (!targetPrinter) {
+    console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
+    targetPrinter = printers[0];
+  }
+
+  console.log(`✅ Usando impresora: ${targetPrinter}`);
+
+  // Comandos ESC/POS
+  const INIT = Buffer.from([ESC, 0x40]);
+  const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
+  const CENTER = Buffer.from([ESC, 0x61, 0x01]);
+  const LEFT = Buffer.from([ESC, 0x61, 0x00]);
+  const CUT = Buffer.from([GS, 0x56, 0x00]);
+
+  // Obtener hora actual
+  const currentTime = new Date().toLocaleTimeString('es-EC', { hour12: false });
+
+  // Generar número de ticket basado en timestamp
+  const ticketNumber = Date.now().toString();
+
+  // Crear contenido del ticket de vaciado
+  const ticketContent = Buffer.concat([
+    INIT,
+    CENTER,
+    Buffer.from(`SERVICIOS DE GESTION AEROPORTUARIA\n`, 'ascii'),
+    Buffer.from(`AEROGERPSA S.A.\n`, 'ascii'),
+    NORMAL,
+    Buffer.from(`Via a Tababela\n`, 'ascii'),
+    Buffer.from(`AEROPUERTO INT. MARISCAL SUCRE - QUITO\n`, 'ascii'),
+    Buffer.from(`TELEFONO DE ATENCION: 022818462\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    CENTER,
+    Buffer.from('OPERACION VACIADO MONEDAS\n\n', 'ascii'),
+
+    LEFT,
+    Buffer.from(`MONOLITO NUMERO        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`Numero de tiquet    : ${ticketNumber}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`MONTANTE EN HOPPER     : ${data.amount.toFixed(2).padStart(8)} $\n`, 'ascii'),
 
     Buffer.from('\n\n\n\n\n', 'ascii'),
     CUT

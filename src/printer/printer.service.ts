@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { printAirportTicket, printFillTicket } from "./printer.controller";
+import { printAirportTicket, printFillTicket, printCoinEmptyTicket } from "./printer.controller";
 
 export const printTicket = (req: Request, res: Response) => {
   try {
@@ -117,6 +117,62 @@ export const printFill = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: "Failed to print fill ticket",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};
+
+export const printCoinEmpty = async (req: Request, res: Response) => {
+  try {
+    const { stationId, date, amount } = req.body;
+
+    // Validar campos requeridos
+    if (!stationId || !date || amount === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: stationId, date, amount"
+      });
+    }
+
+    // Validar que stationId sea un número
+    if (typeof stationId !== 'number' || stationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "stationId must be a positive number"
+      });
+    }
+
+    // Validar que el amount sea un número
+    if (typeof amount !== 'number' || amount < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "amount must be a number greater than or equal to 0"
+      });
+    }
+
+    console.log('🪙 Iniciando impresión de ticket de vaciado de monedas...');
+    console.log('Datos del ticket:', { stationId, date, amount });
+
+    await printCoinEmptyTicket({ stationId, date, amount });
+
+    console.log('✅ Ticket de vaciado impreso exitosamente');
+
+    res.json({
+      success: true,
+      message: "Coin empty ticket printed successfully",
+      ticket: {
+        stationId,
+        date,
+        amount,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error printing coin empty ticket:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to print coin empty ticket",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }
