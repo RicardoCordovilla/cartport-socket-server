@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { printAirportTicket, printFillTicket, printCoinEmptyTicket } from "./printer.controller";
+import { printAirportTicket, printFillTicket, printCoinEmptyTicket, printBillEmptyTicket } from "./printer.controller";
 
 export const printTicket = (req: Request, res: Response) => {
   try {
@@ -173,6 +173,82 @@ export const printCoinEmpty = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: "Failed to print coin empty ticket",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+};
+
+export const printBillEmpty = async (req: Request, res: Response) => {
+  try {
+    const { stationId, date, ticketNumber, bills1, bills5, bills10, totalAmount } = req.body;
+
+    // Validar campos requeridos
+    if (!stationId || !date || !ticketNumber || bills1 === undefined || bills5 === undefined || bills10 === undefined || totalAmount === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: stationId, date, ticketNumber, bills1, bills5, bills10, totalAmount"
+      });
+    }
+
+    // Validar que stationId sea un número
+    if (typeof stationId !== 'number' || stationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "stationId must be a positive number"
+      });
+    }
+
+    // Validar que ticketNumber sea un string
+    if (typeof ticketNumber !== 'string' || ticketNumber.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: "ticketNumber must be a non-empty string"
+      });
+    }
+
+    // Validar que los billetes sean números
+    if (typeof bills1 !== 'number' || typeof bills5 !== 'number' || typeof bills10 !== 'number' || typeof totalAmount !== 'number') {
+      return res.status(400).json({
+        success: false,
+        error: "bills1, bills5, bills10, and totalAmount must be numbers"
+      });
+    }
+
+    // Validar que los valores sean no negativos
+    if (bills1 < 0 || bills5 < 0 || bills10 < 0 || totalAmount < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "All bill counts and totalAmount must be non-negative numbers"
+      });
+    }
+
+    console.log('💵 Iniciando impresión de ticket de vaciado de billetes...');
+    console.log('Datos del ticket:', { stationId, date, ticketNumber, bills1, bills5, bills10, totalAmount });
+
+    await printBillEmptyTicket({ stationId, date, ticketNumber, bills1, bills5, bills10, totalAmount });
+
+    console.log('✅ Ticket de vaciado de billetes impreso exitosamente');
+
+    res.json({
+      success: true,
+      message: "Bill empty ticket printed successfully",
+      ticket: {
+        stationId,
+        date,
+        ticketNumber,
+        bills1,
+        bills5,
+        bills10,
+        totalAmount,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error printing bill empty ticket:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to print bill empty ticket",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }

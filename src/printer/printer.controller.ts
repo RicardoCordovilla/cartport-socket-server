@@ -41,6 +41,16 @@ interface CoinEmptyTicketData {
   amount: number;
 }
 
+interface BillEmptyTicketData {
+  stationId: number;
+  date: string;
+  ticketNumber: string;
+  bills1: number;
+  bills5: number;
+  bills10: number;
+  totalAmount: number;
+}
+
 async function printRawData(printerName: string, data: Buffer): Promise<void> {
   // Verificar si estamos en macOS y usar CUPS en su lugar
   if (process.platform === 'darwin') {
@@ -470,6 +480,76 @@ export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<v
     Buffer.from(`Numero de tiquet    : ${ticketNumber}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`MONTANTE EN HOPPER     : ${data.amount.toFixed(2).padStart(8)} $\n`, 'ascii'),
+
+    Buffer.from('\n\n\n\n\n', 'ascii'),
+    CUT
+  ]);
+
+  await printRawData(targetPrinter, ticketContent);
+}
+
+export async function printBillEmptyTicket(data: BillEmptyTicketData): Promise<void> {
+  console.log('=== Iniciando impresión de ticket de vaciado de billetes ===');
+
+  const printers = await listPrinters();
+
+  if (printers.length === 0) {
+    throw new Error('No se encontraron impresoras disponibles');
+  }
+
+  console.log('Impresoras disponibles:', printers);
+
+  // Buscar impresora BIXOLON o usar la primera disponible
+  let targetPrinter = printers.find(p =>
+      p.toLowerCase().includes('bixolon') ||
+      p.toLowerCase().includes('bk3')
+  );
+
+  if (!targetPrinter) {
+    console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
+    targetPrinter = printers[0];
+  }
+
+  console.log(`✅ Usando impresora: ${targetPrinter}`);
+
+  // Comandos ESC/POS
+  const INIT = Buffer.from([ESC, 0x40]);
+  const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
+  const CENTER = Buffer.from([ESC, 0x61, 0x01]);
+  const LEFT = Buffer.from([ESC, 0x61, 0x00]);
+  const CUT = Buffer.from([GS, 0x56, 0x00]);
+
+  // Obtener hora actual
+  const currentTime = new Date().toLocaleTimeString('es-EC', { hour12: false });
+
+  // Crear contenido del ticket de vaciado de billetes
+  const ticketContent = Buffer.concat([
+    INIT,
+    CENTER,
+    Buffer.from(`SERVICIOS DE GESTION AEROPORTUARIA\n`, 'ascii'),
+    Buffer.from(`AEROGERPSA S.A.\n`, 'ascii'),
+    NORMAL,
+    Buffer.from(`Via a Tababela\n`, 'ascii'),
+    Buffer.from(`AEROPUERTO INT. MARISCAL SUCRE - QUITO\n`, 'ascii'),
+    Buffer.from(`TELEFONO DE ATENCION: 022818462\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    CENTER,
+    Buffer.from('OPERACION VACIADO BILLETES\n\n', 'ascii'),
+
+    LEFT,
+    Buffer.from(`MONOLITO NUMERO        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`BILLETES  1                     ${data.bills1.toString().padStart(8)}\n`, 'ascii'),
+    Buffer.from(`BILLETES  5                     ${data.bills5.toString().padStart(8)}\n`, 'ascii'),
+    Buffer.from(`BILLETES 10                     ${data.bills10.toString().padStart(8)}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`MONTANTE EN BILLETERO   : ${data.totalAmount.toFixed(2).padStart(8)} $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
 
     Buffer.from('\n\n\n\n\n', 'ascii'),
     CUT
