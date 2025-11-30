@@ -29,6 +29,12 @@ interface AirportTicketData {
   website?: string;
 }
 
+interface FillTicketData {
+  ticketNumber: string;
+  date: string;
+  amount: number;
+}
+
 async function printRawData(printerName: string, data: Buffer): Promise<void> {
   // Verificar si estamos en macOS y usar CUPS en su lugar
   if (process.platform === 'darwin') {
@@ -38,7 +44,7 @@ async function printRawData(printerName: string, data: Buffer): Promise<void> {
   // Código original para Windows
   const tmpDir = os.tmpdir();
   const scriptPath = `${tmpDir}\\print_raw_${Date.now()}.ps1`;
-  
+
   const psScript = `
 Add-Type -TypeDefinition @"
 using System;
@@ -124,7 +130,7 @@ if ($result) {
 
   try {
     fs.writeFileSync(scriptPath, psScript, 'utf8');
-    
+
     const { stdout, stderr } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`, {
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
@@ -155,11 +161,11 @@ if ($result) {
 async function printWithCUPS(printerName: string, data: Buffer): Promise<void> {
   const tmpDir = os.tmpdir();
   const dataPath = `${tmpDir}/print_data_${Date.now()}.bin`;
-  
+
   try {
     // Escribir datos binarios a archivo temporal
     fs.writeFileSync(dataPath, data);
-    
+
     // Usar lp para imprimir datos RAW
     const { stdout, stderr } = await execAsync(`lp -d "${printerName}" -o raw "${dataPath}"`, {
       encoding: 'utf8',
@@ -167,7 +173,7 @@ async function printWithCUPS(printerName: string, data: Buffer): Promise<void> {
     });
 
     console.log('✅ Impresión enviada a CUPS');
-    
+
   } catch (error: any) {
     throw new Error(`Error al imprimir con CUPS: ${error.message}`);
   } finally {
@@ -198,45 +204,45 @@ async function listPrinters(): Promise<string[]> {
           encoding: 'utf8',
           timeout: 10000
         });
-        
+
         const printers = stdout
-          .split('\n')
-          .map(line => line.trim())
-          .filter(name => name && name !== '');
-        
+            .split('\n')
+            .map(line => line.trim())
+            .filter(name => name && name !== '');
+
         console.log('🖨️ Impresoras encontradas con PowerShell:', printers);
         return printers;
       } catch (error) {
         console.error('❌ Error con Get-Printer, intentando con WMI...');
-        
+
         try {
           // Fallback usando WMI con PowerShell
           const { stdout } = await execAsync('powershell "Get-WmiObject -Class Win32_Printer | Select-Object -ExpandProperty Name"', {
             encoding: 'utf8',
             timeout: 10000
           });
-          
+
           const printers = stdout
-            .split('\n')
-            .map(line => line.trim())
-            .filter(name => name && name !== '');
-          
+              .split('\n')
+              .map(line => line.trim())
+              .filter(name => name && name !== '');
+
           console.log('🖨️ Impresoras encontradas con WMI:', printers);
           return printers;
         } catch (wmiError) {
           console.error('❌ Error con WMI, intentando con wmic...');
-          
+
           try {
             // Último recurso: intentar wmic (para compatibilidad con versiones antiguas)
             const { stdout } = await execAsync('wmic printer get name /format:csv');
             const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
             const printers = lines
-              .map(line => {
-                const parts = line.split(',');
-                return parts[parts.length - 1]?.trim();
-              })
-              .filter(name => name && name !== '');
-            
+                .map(line => {
+                  const parts = line.split(',');
+                  return parts[parts.length - 1]?.trim();
+                })
+                .filter(name => name && name !== '');
+
             console.log('🖨️ Impresoras encontradas con wmic:', printers);
             return printers;
           } catch (wmicError) {
@@ -254,28 +260,28 @@ async function listPrinters(): Promise<string[]> {
 
 export async function printAirportTicket( data: AirportTicketData): Promise<void> {
   console.log('=== Iniciando impresión de ticket ===');
-  
+
   const printers = await listPrinters();
-  
+
   if (printers.length === 0) {
     throw new Error('No se encontraron impresoras disponibles');
   }
-  
+
   console.log('Impresoras disponibles:', printers);
-  
+
   // Buscar impresora BIXOLON o usar la primera disponible
-  let targetPrinter = printers.find(p => 
-    p.toLowerCase().includes('bixolon') || 
-    p.toLowerCase().includes('bk3')
+  let targetPrinter = printers.find(p =>
+      p.toLowerCase().includes('bixolon') ||
+      p.toLowerCase().includes('bk3')
   );
-  
+
   if (!targetPrinter) {
     console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
     targetPrinter = printers[0];
   }
-  
+
   console.log(`✅ Usando impresora: ${targetPrinter}`);
-  
+
   // Comandos ESC/POS
   const INIT = Buffer.from([ESC, 0x40]);
   const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
@@ -297,39 +303,103 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
     Buffer.from('--------------------------------\n', 'ascii'),
     CENTER,
     Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
-    
+
     LEFT,
     Buffer.from(`Monolito numero: ${data.stationNumber}\n`, 'ascii'),
     Buffer.from(`Fecha: ${data.date}         ${data.time}\n`, 'ascii'),
     Buffer.from(`Num de tiquet: ${data.ticketNumber}\n\n`, 'ascii'),
-    
+
     Buffer.from(`Por utilizacion ${data.serviceType}\n`, 'ascii'),
     Buffer.from(`TOTAL GRABADO           ${data.subtotal.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`IVA   ${data.taxRate}%                ${data.tax.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`TOTAL                   ${data.total.toFixed(2)} $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
-    
+
     Buffer.from(`Pagado:                 ${data.paid.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`Cambio:                 ${data.change.toFixed(2)} $\n`, 'ascii'),
-    
+
     ...(data.changeError !== undefined ? [
       Buffer.from(`Error de cambio:        ${data.changeError.toFixed(2)} $\n`, 'ascii')
     ] : []),
-    
+
     Buffer.from('--------------------------------\n', 'ascii'),
-    
+
     CENTER,
     Buffer.from('DOCUMENTO SIN VALOR TRIBUTARIO\n\n', 'ascii'),
-    
+
     ...(data.website ? [
       Buffer.from('SI DESEA FACTURA INGRESAR A ESTE LINK:\n', 'ascii'),
       Buffer.from(`     ${data.website}\n\n`, 'ascii')
     ] : []),
-    
+
     CENTER,DOUBLE,
     Buffer.from(`TOTAL: ${data.total.toFixed(2)} $\n`, 'ascii'),
     CENTER,NORMAL,
     Buffer.from('(IVA Incluido)\n\n\n\n\n', 'ascii'),
+    CUT
+  ]);
+
+  await printRawData(targetPrinter, ticketContent);
+}
+
+export async function printFillTicket(data: FillTicketData): Promise<void> {
+  console.log('=== Iniciando impresión de ticket de llenado ===');
+
+  const printers = await listPrinters();
+
+  if (printers.length === 0) {
+    throw new Error('No se encontraron impresoras disponibles');
+  }
+
+  console.log('Impresoras disponibles:', printers);
+
+  // Buscar impresora BIXOLON o usar la primera disponible
+  let targetPrinter = printers.find(p =>
+      p.toLowerCase().includes('bixolon') ||
+      p.toLowerCase().includes('bk3')
+  );
+
+  if (!targetPrinter) {
+    console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
+    targetPrinter = printers[0];
+  }
+
+  console.log(`✅ Usando impresora: ${targetPrinter}`);
+
+  // Comandos ESC/POS
+  const INIT = Buffer.from([ESC, 0x40]);
+  const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
+  const DOUBLE = Buffer.from([ESC, 0x21, 0x30]);
+  const CENTER = Buffer.from([ESC, 0x61, 0x01]);
+  const LEFT = Buffer.from([ESC, 0x61, 0x00]);
+  const CUT = Buffer.from([GS, 0x56, 0x00]);
+
+  // Obtener hora actual
+  const currentTime = new Date().toLocaleTimeString('es-EC', { hour12: false });
+
+  // Crear contenido del ticket de llenado
+  const ticketContent = Buffer.concat([
+    INIT,
+    CENTER,
+    Buffer.from(`SERVICIOS DE GESTION AEROPORTUARIA\n`, 'ascii'),
+    Buffer.from(`AEROGERPSA S.A.\n`, 'ascii'),
+    NORMAL,
+    Buffer.from(`Vía a Tababela\n`, 'ascii'),
+    Buffer.from(`AEROPUERTO INT. MARISCAL SUCRE - QUITO\n`, 'ascii'),
+    Buffer.from(`TELEFONO DE ATENCION: 022818462\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    CENTER,
+    Buffer.from('OPERACIÓN LLENADO MONEDAS\n\n', 'ascii'),
+
+    LEFT,
+    Buffer.from(`MONOLITO NUMERO        : ${data.ticketNumber.padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`LLENADO DEL HOPPER     : ${data.amount.toFixed(2).padStart(8)} $\n`, 'ascii'),
+
+    Buffer.from('\n\n\n\n\n', 'ascii'),
     CUT
   ]);
 
