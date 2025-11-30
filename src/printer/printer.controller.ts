@@ -38,6 +38,7 @@ interface FillTicketData {
 interface CoinEmptyTicketData {
   stationId: number;
   date: string;
+  ticketNumber: string;
   amount: number;
 }
 
@@ -385,7 +386,6 @@ export async function printFillTicket(data: FillTicketData): Promise<void> {
   // Comandos ESC/POS
   const INIT = Buffer.from([ESC, 0x40]);
   const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
-  const DOUBLE = Buffer.from([ESC, 0x21, 0x30]);
   const CENTER = Buffer.from([ESC, 0x61, 0x01]);
   const LEFT = Buffer.from([ESC, 0x61, 0x00]);
   const CUT = Buffer.from([GS, 0x56, 0x00]);
@@ -456,9 +456,6 @@ export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<v
   // Obtener hora actual
   const currentTime = new Date().toLocaleTimeString('es-EC', { hour12: false });
 
-  // Generar número de ticket basado en timestamp
-  const ticketNumber = Date.now().toString();
-
   // Crear contenido del ticket de vaciado
   const ticketContent = Buffer.concat([
     INIT,
@@ -477,7 +474,7 @@ export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<v
     Buffer.from(`MONOLITO NUMERO        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
     Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
-    Buffer.from(`Numero de tiquet    : ${ticketNumber}\n`, 'ascii'),
+    Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`MONTANTE EN HOPPER     : ${data.amount.toFixed(2).padStart(8)} $\n`, 'ascii'),
 

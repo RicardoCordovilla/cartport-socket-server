@@ -124,13 +124,13 @@ export const printFill = async (req: Request, res: Response) => {
 
 export const printCoinEmpty = async (req: Request, res: Response) => {
   try {
-    const { stationId, date, amount } = req.body;
+    const { stationId, date, ticketNumber, amount } = req.body;
 
     // Validar campos requeridos
-    if (!stationId || !date || amount === undefined) {
+    if (!stationId || !date || !ticketNumber || amount === undefined) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: stationId, date, amount"
+        error: "Missing required fields: stationId, date, ticketNumber, amount"
       });
     }
 
@@ -139,6 +139,14 @@ export const printCoinEmpty = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         error: "stationId must be a positive number"
+      });
+    }
+
+    // Validar que ticketNumber sea un string
+    if (typeof ticketNumber !== 'string' || ticketNumber.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: "ticketNumber must be a non-empty string"
       });
     }
 
@@ -151,9 +159,9 @@ export const printCoinEmpty = async (req: Request, res: Response) => {
     }
 
     console.log('🪙 Iniciando impresión de ticket de vaciado de monedas...');
-    console.log('Datos del ticket:', { stationId, date, amount });
+    console.log('Datos del ticket:', { stationId, date, ticketNumber, amount });
 
-    await printCoinEmptyTicket({ stationId, date, amount });
+    await printCoinEmptyTicket({ stationId, date, ticketNumber, amount });
 
     console.log('✅ Ticket de vaciado impreso exitosamente');
 
@@ -163,6 +171,7 @@ export const printCoinEmpty = async (req: Request, res: Response) => {
       ticket: {
         stationId,
         date,
+        ticketNumber,
         amount,
         timestamp: new Date().toISOString()
       }
