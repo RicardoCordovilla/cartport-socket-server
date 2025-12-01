@@ -304,8 +304,14 @@ export const printBillEmpty = async (req: Request, res: Response) => {
 
 export const printRecaudacion = async (req: Request, res: Response) => {
   try {
-    const { stationId, date, ticketNumber, ticketNumberAnterior, resumen } =
-      req.body;
+    const {
+      stationId,
+      date,
+      ticketNumber,
+      ticketNumberAnterior,
+      hopper,
+      resumen,
+    } = req.body;
 
     // Validar campos requeridos
     if (
@@ -365,6 +371,7 @@ export const printRecaudacion = async (req: Request, res: Response) => {
       date,
       ticketNumber,
       ticketNumberAnterior,
+      hopper,
       resumen,
     });
 
