@@ -30,6 +30,7 @@ interface AirportTicketData {
 }
 
 interface FillTicketData {
+  stationId: number;
   ticketNumber: string;
   date: string;
   amount: number;
@@ -408,7 +409,7 @@ export async function printFillTicket(data: FillTicketData): Promise<void> {
     Buffer.from('OPERACIÓN LLENADO MONEDAS\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`MONOLITO NUMERO        : ${data.ticketNumber.padStart(10)}\n`, 'ascii'),
+    Buffer.from(`MONOLITO NUMERO        :  ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
     Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
