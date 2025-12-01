@@ -111,25 +111,25 @@ public class RawPrinterHelper {
         public string pDataType;
     }
 
-    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
-    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool ClosePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool StartDocPrinter(IntPtr hPrinter, Int32 level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
 
-    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool EndDocPrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool StartPagePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool EndPagePrinter(IntPtr hPrinter);
 
-    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
     public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, Int32 dwCount, out Int32 dwWritten);
 
     public static bool SendBytesToPrinter(string szPrinterName, byte[] pBytes) {
@@ -255,9 +255,9 @@ async function listPrinters(): Promise<string[]> {
         });
 
         const printers = stdout
-            .split('\n')
-            .map(line => line.trim())
-            .filter(name => name && name !== '');
+          .split('\n')
+          .map(line => line.trim())
+          .filter(name => name && name !== '');
 
         console.log('🖨️ Impresoras encontradas con PowerShell:', printers);
         return printers;
@@ -272,9 +272,9 @@ async function listPrinters(): Promise<string[]> {
           });
 
           const printers = stdout
-              .split('\n')
-              .map(line => line.trim())
-              .filter(name => name && name !== '');
+            .split('\n')
+            .map(line => line.trim())
+            .filter(name => name && name !== '');
 
           console.log('🖨️ Impresoras encontradas con WMI:', printers);
           return printers;
@@ -286,11 +286,11 @@ async function listPrinters(): Promise<string[]> {
             const { stdout } = await execAsync('wmic printer get name /format:csv');
             const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,Name'));
             const printers = lines
-                .map(line => {
-                  const parts = line.split(',');
-                  return parts[parts.length - 1]?.trim();
-                })
-                .filter(name => name && name !== '');
+              .map(line => {
+                const parts = line.split(',');
+                return parts[parts.length - 1]?.trim();
+              })
+              .filter(name => name && name !== '');
 
             console.log('🖨️ Impresoras encontradas con wmic:', printers);
             return printers;
@@ -307,7 +307,7 @@ async function listPrinters(): Promise<string[]> {
   }
 }
 
-export async function printAirportTicket( data: AirportTicketData): Promise<void> {
+export async function printAirportTicket(data: AirportTicketData): Promise<void> {
   console.log('=== Iniciando impresión de ticket ===');
 
   const printers = await listPrinters();
@@ -320,8 +320,8 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
 
   // Buscar impresora BIXOLON o usar la primera disponible
   let targetPrinter = printers.find(p =>
-      p.toLowerCase().includes('bixolon') ||
-      p.toLowerCase().includes('bk3')
+    p.toLowerCase().includes('bixolon') ||
+    p.toLowerCase().includes('bk3')
   );
 
   if (!targetPrinter) {
@@ -381,9 +381,9 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
       Buffer.from(`     ${data.website}\n\n`, 'ascii')
     ] : []),
 
-    CENTER,DOUBLE,
+    CENTER, DOUBLE,
     Buffer.from(`TOTAL: ${data.total.toFixed(2)} $\n`, 'ascii'),
-    CENTER,NORMAL,
+    CENTER, NORMAL,
     Buffer.from('(IVA Incluido)\n\n\n\n\n', 'ascii'),
     CUT
   ]);
@@ -404,8 +404,8 @@ export async function printFillTicket(data: FillTicketData): Promise<void> {
 
   // Buscar impresora BIXOLON o usar la primera disponible
   let targetPrinter = printers.find(p =>
-      p.toLowerCase().includes('bixolon') ||
-      p.toLowerCase().includes('bk3')
+    p.toLowerCase().includes('bixolon') ||
+    p.toLowerCase().includes('bk3')
   );
 
   if (!targetPrinter) {
@@ -467,8 +467,8 @@ export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<v
 
   // Buscar impresora BIXOLON o usar la primera disponible
   let targetPrinter = printers.find(p =>
-      p.toLowerCase().includes('bixolon') ||
-      p.toLowerCase().includes('bk3')
+    p.toLowerCase().includes('bixolon') ||
+    p.toLowerCase().includes('bk3')
   );
 
   if (!targetPrinter) {
@@ -530,8 +530,8 @@ export async function printBillEmptyTicket(data: BillEmptyTicketData): Promise<v
 
   // Buscar impresora BIXOLON o usar la primera disponible
   let targetPrinter = printers.find(p =>
-      p.toLowerCase().includes('bixolon') ||
-      p.toLowerCase().includes('bk3')
+    p.toLowerCase().includes('bixolon') ||
+    p.toLowerCase().includes('bk3')
   );
 
   if (!targetPrinter) {
@@ -600,8 +600,8 @@ export async function printRecaudacionTicket(data: RecaudacionTicketData): Promi
 
   // Buscar impresora BIXOLON o usar la primera disponible
   let targetPrinter = printers.find(p =>
-      p.toLowerCase().includes('bixolon') ||
-      p.toLowerCase().includes('bk3')
+    p.toLowerCase().includes('bixolon') ||
+    p.toLowerCase().includes('bk3')
   );
 
   if (!targetPrinter) {
@@ -650,7 +650,7 @@ export async function printRecaudacionTicket(data: RecaudacionTicketData): Promi
     Buffer.from(`ACUMUL VACÍA BILLETES   :   ${data.resumen.vaciadosBilletes.total.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`ACUMUL ERROR DEVOLUCIO  :     0.00 $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
-    
+
     CENTER,
     Buffer.from('RECAUDACION\n', 'ascii'),
     LEFT,
