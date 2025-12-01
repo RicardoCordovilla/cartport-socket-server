@@ -323,7 +323,7 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
     Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`Monolito numero: ${data.stationNumber}\n`, 'ascii'),
+    Buffer.from(`Numero de maquina: ${data.stationNumber}\n`, 'ascii'),
     Buffer.from(`Fecha: ${data.date}         ${data.time}\n`, 'ascii'),
     Buffer.from(`Num de tiquet: ${data.ticketNumber}\n\n`, 'ascii'),
 
@@ -409,7 +409,7 @@ export async function printFillTicket(data: FillTicketData): Promise<void> {
     Buffer.from('OPERACIÓN LLENADO MONEDAS\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`MONOLITO NUMERO        :  ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Numero de maquina        :  ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
     Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
@@ -472,7 +472,7 @@ export async function printCoinEmptyTicket(data: CoinEmptyTicketData): Promise<v
     Buffer.from('OPERACION VACIADO MONEDAS\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`MONOLITO NUMERO        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Numero de maquina        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
     Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
@@ -535,7 +535,7 @@ export async function printBillEmptyTicket(data: BillEmptyTicketData): Promise<v
     Buffer.from('OPERACION VACIADO BILLETES\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`MONOLITO NUMERO        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
+    Buffer.from(`Numero de maquina        : ${data.stationId.toString().padStart(10)}\n`, 'ascii'),
     Buffer.from(`Fecha : ${data.date}            ${currentTime}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`Numero de tiquet    : ${data.ticketNumber}\n`, 'ascii'),
