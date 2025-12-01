@@ -53,6 +53,38 @@ interface BillEmptyTicketData {
   totalAmount: number;
 }
 
+interface RecaudacionTicketData {
+  stationId: number;
+  date: string;
+  ticketNumber: string;
+  ticketNumberAnterior: string;
+  numeroUsos: number;
+  resumen: {
+    llenados: {
+      veces: number;
+      total: number;
+    };
+    vaciadosMonedas: {
+      veces: number;
+      total: number;
+    };
+    vaciadosBilletes: {
+      veces: number;
+      Billete_de_1: number;
+      Billete_de_5: number;
+      Billete_de_10: number;
+      total: number;
+    };
+    totalOne: number;
+    totalFive: number;
+    totalTen: number;
+    totalCartsSoldSession: number;
+    totalCoins: number;
+    totalCoinsGiven: number;
+    totalAmountCalculated: number;
+  };
+}
+
 async function printRawData(printerName: string, data: Buffer): Promise<void> {
   // Verificar si estamos en macOS y usar CUPS en su lugar
   if (process.platform === 'darwin') {
@@ -80,7 +112,7 @@ public class RawPrinterHelper {
         public string pDataType;
     }
 
-    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    [DllImport("winspool.Drv", EntryPoint = "OpenPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = StdCall)]
     public static extern bool OpenPrinter([MarshalAs(UnmanagedType.LPStr)] string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
     [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = StdCall)]
@@ -323,7 +355,7 @@ export async function printAirportTicket( data: AirportTicketData): Promise<void
     Buffer.from('COMPROBANTE DE PAGO\n\n', 'ascii'),
 
     LEFT,
-    Buffer.from(`Numero de maquina: ${data.stationNumber}\n`, 'ascii'),
+    Buffer.from(`Monolito numero: ${data.stationNumber}\n`, 'ascii'),
     Buffer.from(`Fecha: ${data.date}         ${data.time}\n`, 'ascii'),
     Buffer.from(`Num de tiquet: ${data.ticketNumber}\n\n`, 'ascii'),
 
@@ -547,6 +579,100 @@ export async function printBillEmptyTicket(data: BillEmptyTicketData): Promise<v
     Buffer.from(`BILLETES 10                     ${data.bills10.toString().padStart(8)}\n`, 'ascii'),
     Buffer.from('\n', 'ascii'),
     Buffer.from(`MONTANTE EN BILLETERO   : ${data.totalAmount.toFixed(2).padStart(8)} $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+
+    Buffer.from('\n\n\n\n\n', 'ascii'),
+    CUT
+  ]);
+
+  await printRawData(targetPrinter, ticketContent);
+}
+
+export async function printRecaudacionTicket(data: RecaudacionTicketData): Promise<void> {
+  console.log('=== Iniciando impresión de ticket de recaudación ===');
+
+  const printers = await listPrinters();
+
+  if (printers.length === 0) {
+    throw new Error('No se encontraron impresoras disponibles');
+  }
+
+  console.log('Impresoras disponibles:', printers);
+
+  // Buscar impresora BIXOLON o usar la primera disponible
+  let targetPrinter = printers.find(p =>
+      p.toLowerCase().includes('bixolon') ||
+      p.toLowerCase().includes('bk3')
+  );
+
+  if (!targetPrinter) {
+    console.log('⚠️ No se encontró impresora BIXOLON, usando la primera disponible');
+    targetPrinter = printers[0];
+  }
+
+  console.log(`✅ Usando impresora: ${targetPrinter}`);
+
+  // Comandos ESC/POS
+  const INIT = Buffer.from([ESC, 0x40]);
+  const NORMAL = Buffer.from([ESC, 0x21, 0x00]);
+  const CENTER = Buffer.from([ESC, 0x61, 0x01]);
+  const LEFT = Buffer.from([ESC, 0x61, 0x00]);
+  const CUT = Buffer.from([GS, 0x56, 0x00]);
+
+  // Obtener hora actual
+  const currentTime = new Date().toLocaleTimeString('es-EC', { hour12: false });
+
+  // Crear contenido del ticket de recaudación
+  const ticketContent = Buffer.concat([
+    INIT,
+    CENTER,
+    Buffer.from(`SERVICIOS DE GESTION AEROPORTUARIA\n`, 'ascii'),
+    Buffer.from(`AEROGERPSA S.A.\n`, 'ascii'),
+    Buffer.from(`Via a Tababela\n`, 'ascii'),
+    NORMAL,
+    Buffer.from(`AEROPUERTO INT. MARISCAL SUCRE - QUITO\n`, 'ascii'),
+    Buffer.from(`TELEFONO DE ATENCION: 022818462\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`MONOLITO NUMERO                 ${data.stationId}\n`, 'ascii'),
+    Buffer.from(`Fecha : ${data.date}     ${currentTime}\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    CENTER,
+    Buffer.from('VALORES ACUMULADOS DESDE\n', 'ascii'),
+    Buffer.from('ANTERIOR RECAUDACION\n', 'ascii'),
+    LEFT,
+    Buffer.from('\n', 'ascii'),
+    Buffer.from(`Num de tiquet ant       :  ${data.ticketNumberAnterior}\n`, 'ascii'),
+    Buffer.from(`Numero de usos          :         ${data.numeroUsos}\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`ACUMUL LLENADO MONEDA   :   ${data.resumen.llenados.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`ACUMUL MONEDA ENTRÓ     :     0.00 $\n`, 'ascii'),
+    Buffer.from(`ACUMUL MONEDA DEVUELTA  :   ${data.resumen.totalCoinsGiven.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`ACUMUL VACÍA MONEDAS    :   ${data.resumen.vaciadosMonedas.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`ACUMUL VACÍA BILLETES   :   ${data.resumen.vaciadosBilletes.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`ACUMUL ERROR DEVOLUCIO  :     0.00 $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    
+    CENTER,
+    Buffer.from('RECAUDACION\n', 'ascii'),
+    LEFT,
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`Numero de tiquet        :  ${data.ticketNumber}\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`NUMERO BILLETES 1       :         ${data.resumen.totalOne}\n`, 'ascii'),
+    Buffer.from(`NUMERO BILLETES 5       :         ${data.resumen.totalFive}\n`, 'ascii'),
+    Buffer.from(`NUMERO BILLETES 10      :         ${data.resumen.totalTen}\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`MONTANTE BILLETERO      :    ${data.resumen.vaciadosBilletes.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`MONTANTE MONEDERO       :    ${data.resumen.totalCoins.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`ULTIMO LLENADO          :    ${data.resumen.llenados.total.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`MONTANTE MONEDERO       :     1.00 $\n`, 'ascii'),
+    Buffer.from(`MONEDAS DEVUELTAS       :    ${data.resumen.totalCoinsGiven.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from(`MONTANTE TOTAL          :   ${data.resumen.totalAmountCalculated.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`MONEDAS EN HOPPER       :     0.00 $\n`, 'ascii'),
+    Buffer.from(`TOTAL RECAUDADO         :   ${data.resumen.totalAmountCalculated.toFixed(2)} $\n`, 'ascii'),
+    Buffer.from('--------------------------------\n', 'ascii'),
+    Buffer.from(`ERROR DEVOLUCION        :     1.00 $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
 
     Buffer.from('\n\n\n\n\n', 'ascii'),
