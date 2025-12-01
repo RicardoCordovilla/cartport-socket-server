@@ -58,7 +58,6 @@ interface RecaudacionTicketData {
   date: string;
   ticketNumber: string;
   ticketNumberAnterior: string;
-  numeroUsos: number;
   resumen: {
     llenados: {
       veces: number;
@@ -641,8 +640,8 @@ export async function printRecaudacionTicket(data: RecaudacionTicketData): Promi
     Buffer.from('ANTERIOR RECAUDACION\n', 'ascii'),
     LEFT,
     Buffer.from('\n', 'ascii'),
-    Buffer.from(`Num de tiquet ant       :  ${data.ticketNumberAnterior}\n`, 'ascii'),
-    Buffer.from(`Numero de usos          :         ${data.numeroUsos}\n`, 'ascii'),
+    // Buffer.from(`Num de tiquet ant       :  ${data.ticketNumberAnterior}\n`, 'ascii'),
+    Buffer.from(`Numero de usos          :         ${data.resumen.totalCartsSoldSession}\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
     Buffer.from(`ACUMUL LLENADO MONEDA   :   ${data.resumen.llenados.total.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`ACUMUL MONEDA ENTRÓ     :     0.00 $\n`, 'ascii'),
@@ -665,14 +664,14 @@ export async function printRecaudacionTicket(data: RecaudacionTicketData): Promi
     Buffer.from(`MONTANTE BILLETERO      :    ${data.resumen.vaciadosBilletes.total.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`MONTANTE MONEDERO       :    ${data.resumen.totalCoins.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`ULTIMO LLENADO          :    ${data.resumen.llenados.total.toFixed(2)} $\n`, 'ascii'),
-    Buffer.from(`MONTANTE MONEDERO       :     1.00 $\n`, 'ascii'),
+    // Buffer.from(`MONTANTE MONEDERO       :     1.00 $\n`, 'ascii'),
     Buffer.from(`MONEDAS DEVUELTAS       :    ${data.resumen.totalCoinsGiven.toFixed(2)} $\n`, 'ascii'),
     Buffer.from(`MONTANTE TOTAL          :   ${data.resumen.totalAmountCalculated.toFixed(2)} $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
     Buffer.from(`MONEDAS EN HOPPER       :     0.00 $\n`, 'ascii'),
     Buffer.from(`TOTAL RECAUDADO         :   ${data.resumen.totalAmountCalculated.toFixed(2)} $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
-    Buffer.from(`ERROR DEVOLUCION        :     1.00 $\n`, 'ascii'),
+    Buffer.from(`ERROR DEVOLUCION        :     0.00 $\n`, 'ascii'),
     Buffer.from('--------------------------------\n', 'ascii'),
 
     Buffer.from('\n\n\n\n\n', 'ascii'),

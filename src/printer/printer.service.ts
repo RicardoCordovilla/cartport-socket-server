@@ -304,56 +304,71 @@ export const printBillEmpty = async (req: Request, res: Response) => {
 
 export const printRecaudacion = async (req: Request, res: Response) => {
   try {
-    const { stationId, date, ticketNumber, ticketNumberAnterior, numeroUsos, resumen } = req.body;
+    const { stationId, date, ticketNumber, ticketNumberAnterior, resumen } =
+      req.body;
 
     // Validar campos requeridos
-    if (!stationId || !date || !ticketNumber || !ticketNumberAnterior || numeroUsos === undefined || !resumen) {
+    if (
+      !stationId ||
+      !date ||
+      !ticketNumber ||
+      !ticketNumberAnterior ||
+      !resumen
+    ) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: stationId, date, ticketNumber, ticketNumberAnterior, numeroUsos, resumen"
+        error:
+          "Missing required fields: stationId, date, ticketNumber, ticketNumberAnterior, numeroUsos, resumen",
       });
     }
 
     // Validar que stationId sea un número
-    if (typeof stationId !== 'number' || stationId <= 0) {
+    if (typeof stationId !== "number" || stationId <= 0) {
       return res.status(400).json({
         success: false,
-        error: "stationId must be a positive number"
-      });
-    }
-
-    // Validar que numeroUsos sea un número
-    if (typeof numeroUsos !== 'number' || numeroUsos < 0) {
-      return res.status(400).json({
-        success: false,
-        error: "numeroUsos must be a non-negative number"
+        error: "stationId must be a positive number",
       });
     }
 
     // Validar estructura del resumen
-    const requiredResumenFields = ['llenados', 'vaciadosMonedas', 'vaciadosBilletes', 'totalOne', 'totalFive', 'totalTen', 'totalCartsSoldSession', 'totalCoins', 'totalCoinsGiven', 'totalAmountCalculated'];
+    const requiredResumenFields = [
+      "llenados",
+      "vaciadosMonedas",
+      "vaciadosBilletes",
+      "totalOne",
+      "totalFive",
+      "totalTen",
+      "totalCartsSoldSession",
+      "totalCoins",
+      "totalCoinsGiven",
+      "totalAmountCalculated",
+    ];
     for (const field of requiredResumenFields) {
       if (resumen[field] === undefined) {
         return res.status(400).json({
           success: false,
-          error: `Missing required field in resumen: ${field}`
+          error: `Missing required field in resumen: ${field}`,
         });
       }
     }
 
-    console.log('📊 Iniciando impresión de ticket de recaudación...');
-    console.log('Datos del ticket:', { stationId, date, ticketNumber, ticketNumberAnterior, numeroUsos });
-
-    await printRecaudacionTicket({ 
-      stationId, 
-      date, 
-      ticketNumber, 
-      ticketNumberAnterior, 
-      numeroUsos, 
-      resumen 
+    console.log("📊 Iniciando impresión de ticket de recaudación...");
+    console.log("Datos del ticket:", {
+      stationId,
+      date,
+      ticketNumber,
+      ticketNumberAnterior,
     });
 
-    console.log('✅ Ticket de recaudación impreso exitosamente');
+    await printRecaudacionTicket({
+      stationId,
+      date,
+      ticketNumber,
+      ticketNumberAnterior,
+      resumen,
+    });
+
+    console.log("✅ Ticket de recaudación impreso exitosamente");
 
     res.json({
       success: true,
@@ -363,18 +378,16 @@ export const printRecaudacion = async (req: Request, res: Response) => {
         date,
         ticketNumber,
         ticketNumberAnterior,
-        numeroUsos,
         resumen,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
-
   } catch (error) {
     console.error("❌ Error printing recaudacion ticket:", error);
     res.status(500).json({
       success: false,
       error: "Failed to print recaudacion ticket",
-      details: error instanceof Error ? error.message : "Unknown error"
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
