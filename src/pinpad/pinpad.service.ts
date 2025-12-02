@@ -19,7 +19,7 @@ export const requestPayment = async (req: Request, res: Response) => {
       // Permitir override de MID/TID si es necesario
       mid: midOverride,
       tid: tidOverride,
-    } = req.query;
+    } = req.body;
     
     if (!monto || !montoBaseIva || !montoBaseNoIva || !iva || !cid) {
       return res.status(400).json({
