@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {printTicket, printTest, printFill, printCoinEmpty, printBillEmpty, printRecaudacion} from "./printer.service";
+import {printTicket, printTest, printFill, printCoinEmpty, printBillEmpty, printRecaudacion, printCancellation} from "./printer.service";
 
 const router = Router();
 router.post("/ticket", printTicket);
@@ -8,5 +8,6 @@ router.post("/print-fill", printFill);
 router.post("/print-coinempty", printCoinEmpty);
 router.post("/print-billempty", printBillEmpty);
 router.post("/print-recaudacion", printRecaudacion);
+router.post("/print-errorchange", printCancellation);
 
 export default router;

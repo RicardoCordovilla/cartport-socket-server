@@ -4,7 +4,8 @@ import {
   FillTicketData, 
   CoinEmptyTicketData, 
   BillEmptyTicketData, 
-  RecaudacionTicketData 
+  RecaudacionTicketData,
+  CancellationTicketData
 } from '../types/ticket.types';
 
 export function generateAirportTicketContent(data: AirportTicketData): Buffer {
@@ -213,6 +214,36 @@ export function generateRecaudacionTicketContent(data: RecaudacionTicketData): B
     createSeparator(),
     createLine(`ERROR DEVOLUCION        :     0.00 $`),
     createSeparator(),
+
+    createLine("\n\n\n\n\n"),
+    COMMANDS.CUT,
+  ]);
+}
+
+export function generateCancellationTicketContent(data: CancellationTicketData): Buffer {
+  const currentTime = new Date().toLocaleTimeString("es-EC", { hour12: false });
+
+  return Buffer.concat([
+    COMMANDS.INIT,
+    COMMANDS.CENTER,
+    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
+    createLine(`AEROGERPSA S.A.`),
+    COMMANDS.NORMAL,
+    createLine(`Via a Tababela`),
+    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
+    createLine(`TELEFONO DE ATENCION: 022818462`),
+    createSeparator(),
+    COMMANDS.CENTER,
+    createLine("ANULACION / ERROR DE DEVOLUCION\n"),
+
+    COMMANDS.LEFT,
+    createLine(`Monolito numero :               ${data.stationId}`),
+    createLine(`Fecha : ${data.date}            ${currentTime}`),
+    createLine(`Num de tiquet :         ${data.ticketNumber}`),
+    createSeparator(),
+    createLine(`Pagado:                 ${data.pagado.toFixed(2)} $`),
+    createLine(`Cambio:                 ${data.cambio.toFixed(2)} $`),
+    createLine(`Error de cambio:        ${data.error.toFixed(2)} $`),
 
     createLine("\n\n\n\n\n"),
     COMMANDS.CUT,

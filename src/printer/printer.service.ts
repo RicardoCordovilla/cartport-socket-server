@@ -5,6 +5,7 @@ import {
   printCoinEmptyTicket,
   printBillEmptyTicket,
   printRecaudacionTicket,
+  printCancellationTicket,
 } from "./printer.controller";
 
 export const printTicket = (req: Request, res: Response) => {
@@ -394,6 +395,105 @@ export const printRecaudacion = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: "Failed to print recaudacion ticket",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const printCancellation = async (req: Request, res: Response) => {
+  try {
+    const { stationId, ticketNumber, date, pagado, cambio, error } = req.body;
+
+    // Validar campos requeridos
+    if (
+      stationId === undefined ||
+      !ticketNumber ||
+      !date ||
+      pagado === undefined ||
+      cambio === undefined ||
+      error === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: stationId, ticketNumber, date, pagado, cambio, error",
+      });
+    }
+
+    // Validar que stationId sea un número
+    if (typeof stationId !== "number" || stationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "stationId must be a positive number",
+      });
+    }
+
+    // Validar que ticketNumber sea un string
+    if (typeof ticketNumber !== "string" || ticketNumber.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "ticketNumber must be a non-empty string",
+      });
+    }
+
+    // Validar que los montos sean números
+    if (
+      typeof pagado !== "number" ||
+      typeof cambio !== "number" ||
+      typeof error !== "number"
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: "pagado, cambio, and error must be numbers",
+      });
+    }
+
+    // Validar que los valores sean no negativos
+    if (pagado < 0 || cambio < 0 || error < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "pagado, cambio, and error must be non-negative numbers",
+      });
+    }
+
+    console.log("❌ Iniciando impresión de ticket de anulación/error...");
+    console.log("Datos del ticket:", {
+      stationId,
+      ticketNumber,
+      date,
+      pagado,
+      cambio,
+      error,
+    });
+
+    await printCancellationTicket({
+      stationId,
+      ticketNumber,
+      date,
+      pagado,
+      cambio,
+      error,
+    });
+
+    console.log("✅ Ticket de anulación/error impreso exitosamente");
+
+    res.json({
+      success: true,
+      message: "Cancellation ticket printed successfully",
+      ticket: {
+        stationId,
+        ticketNumber,
+        date,
+        pagado,
+        cambio,
+        error,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error printing cancellation ticket:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to print cancellation ticket",
       details: error instanceof Error ? error.message : "Unknown error",
     });
   }

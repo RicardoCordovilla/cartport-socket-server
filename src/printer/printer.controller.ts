@@ -5,6 +5,7 @@ import {
   generateCoinEmptyTicketContent,
   generateBillEmptyTicketContent,
   generateRecaudacionTicketContent,
+  generateCancellationTicketContent,
 } from './utils/ticket-generators';
 import {
   AirportTicketData,
@@ -12,6 +13,7 @@ import {
   CoinEmptyTicketData,
   BillEmptyTicketData,
   RecaudacionTicketData,
+  CancellationTicketData,
 } from './types/ticket.types';
 
 export async function printAirportTicket(data: AirportTicketData): Promise<void> {
@@ -60,6 +62,16 @@ export async function printRecaudacionTicket(data: RecaudacionTicketData): Promi
   const printers = await listPrinters();
   const targetPrinter = findTargetPrinter(printers);
   const ticketContent = generateRecaudacionTicketContent(data);
+
+  await printRawData(targetPrinter, ticketContent);
+}
+
+export async function printCancellationTicket(data: CancellationTicketData): Promise<void> {
+  console.log("=== Iniciando impresión de ticket de anulación/error ===");
+
+  const printers = await listPrinters();
+  const targetPrinter = findTargetPrinter(printers);
+  const ticketContent = generateCancellationTicketContent(data);
 
   await printRawData(targetPrinter, ticketContent);
 }
