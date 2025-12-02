@@ -1,5 +1,5 @@
 {
-  "host": "192.168.100.24",
+  "host": "192.168.0.105",
   "port": 9999,
   "timeout": 60000,
   "merchantData": {
@@ -13,5 +13,5 @@
     "gateway": "192.168.100.1"
   },
   "securityData": "B12D3D63069BD9EB05B7BBEEAA228ABC",
-  "logApiUrl": "http://192.168.100.63:3000/pinpadlogs"
+  "logApiUrl": "http://192.168.0.104:9000/pinpadlogs"
 }
