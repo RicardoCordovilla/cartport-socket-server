@@ -7,18 +7,29 @@ import {
   RecaudacionTicketData,
   CancellationTicketData
 } from '../types/ticket.types';
+import { getPrinterConfig } from '../printer.config';
+
+// Helper function to generate company header using configurable data
+function generateCompanyHeader(): Buffer[] {
+  const config = getPrinterConfig();
+  const { companyLines } = config;
+  
+  return [
+    COMMANDS.CENTER,
+    createLine(companyLines.line1),
+    createLine(companyLines.line2),
+    COMMANDS.NORMAL,
+    createLine(companyLines.address),
+    createLine(companyLines.location),
+    createLine(`TELEFONO DE ATENCION: ${companyLines.phone}`),
+    createSeparator()
+  ];
+}
 
 export function generateAirportTicketContent(data: AirportTicketData): Buffer {
   return Buffer.concat([
     COMMANDS.INIT,
-    COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION`),
-    createLine(`AEROPORTUARIA S.A.`),
-    COMMANDS.NORMAL,
-    createLine(`Vía a Tababela`),
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`Telefono de atención: ${data.phoneNumber}`),
-    createSeparator(),
+    ...generateCompanyHeader(),
     COMMANDS.CENTER,
     createLine("COMPROBANTE DE PAGO\n"),
 
@@ -67,14 +78,7 @@ export function generateFillTicketContent(data: FillTicketData): Buffer {
 
   return Buffer.concat([
     COMMANDS.INIT,
-    COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
-    createLine(`AEROGERPSA S.A.`),
-    COMMANDS.NORMAL,
-    createLine(`Vía a Tababela`),
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`TELEFONO DE ATENCION: 022818462`),
-    createSeparator(),
+    ...generateCompanyHeader(),
     COMMANDS.CENTER,
     createLine("OPERACIÓN LLENADO MONEDAS\n"),
 
@@ -96,14 +100,7 @@ export function generateCoinEmptyTicketContent(data: CoinEmptyTicketData): Buffe
 
   return Buffer.concat([
     COMMANDS.INIT,
-    COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
-    createLine(`AEROGERPSA S.A.`),
-    COMMANDS.NORMAL,
-    createLine(`Via a Tababela`),
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`TELEFONO DE ATENCION: 022818462`),
-    createSeparator(),
+    ...generateCompanyHeader(),
     COMMANDS.CENTER,
     createLine("OPERACION VACIADO MONEDAS\n"),
 
@@ -125,14 +122,7 @@ export function generateBillEmptyTicketContent(data: BillEmptyTicketData): Buffe
 
   return Buffer.concat([
     COMMANDS.INIT,
-    COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
-    createLine(`AEROGERPSA S.A.`),
-    COMMANDS.NORMAL,
-    createLine(`Via a Tababela`),
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`TELEFONO DE ATENCION: 022818462`),
-    createSeparator(),
+    ...generateCompanyHeader(),
     COMMANDS.CENTER,
     createLine("OPERACION VACIADO BILLETES\n"),
 
@@ -158,16 +148,17 @@ export function generateBillEmptyTicketContent(data: BillEmptyTicketData): Buffe
 
 export function generateRecaudacionTicketContent(data: RecaudacionTicketData): Buffer {
   const currentTime = new Date().toLocaleTimeString("es-EC", { hour12: false });
+  const config = getPrinterConfig();
 
   return Buffer.concat([
     COMMANDS.INIT,
     COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
-    createLine(`AEROGERPSA S.A.`),
-    createLine(`Via a Tababela`),
+    createLine(config.companyLines.line1),
+    createLine(config.companyLines.line2),
+    createLine(config.companyLines.address),
     COMMANDS.NORMAL,
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`TELEFONO DE ATENCION: 022818462`),
+    createLine(config.companyLines.location),
+    createLine(`TELEFONO DE ATENCION: ${config.companyLines.phone}`),
     createSeparator(),
     createLine(`MONOLITO NUMERO                 ${data.stationId}`),
     createLine(`Fecha : ${data.date}     ${currentTime}`),
@@ -225,14 +216,7 @@ export function generateCancellationTicketContent(data: CancellationTicketData):
 
   return Buffer.concat([
     COMMANDS.INIT,
-    COMMANDS.CENTER,
-    createLine(`SERVICIOS DE GESTION AEROPORTUARIA`),
-    createLine(`AEROGERPSA S.A.`),
-    COMMANDS.NORMAL,
-    createLine(`Via a Tababela`),
-    createLine(`AEROPUERTO INT. MARISCAL SUCRE - QUITO`),
-    createLine(`TELEFONO DE ATENCION: 022818462`),
-    createSeparator(),
+    ...generateCompanyHeader(),
     COMMANDS.CENTER,
     createLine("ANULACION / ERROR DE DEVOLUCION\n"),
 
