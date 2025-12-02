@@ -812,13 +812,14 @@ export async function printRecaudacionTicket(
     ),
     Buffer.from("--------------------------------\n", "ascii"),
     Buffer.from(
-      `TOTAL RECAUDADO         :   ${(
+      `VENTA TOTAL        :   ${(
         data.resumen.vaciadosMonedas.total +
         data.resumen.vaciadosBilletes.total +
         data.resumen.totalOne +
         data.resumen.totalFive * 5 +
         data.resumen.totalTen * 10 +
-        data.hopper
+        data.hopper -
+        data.resumen.llenados.total
       ).toFixed(2)} $\n`,
       "ascii"
     ),
