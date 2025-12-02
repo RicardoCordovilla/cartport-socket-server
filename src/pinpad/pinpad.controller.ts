@@ -293,15 +293,15 @@ export function buildPaymentFrame(params: {
   console.log(`Red: ${codigoRed}`);
   console.log(`Diferido: ${codigoDiferido}`);
   console.log(`Monto Total: ${montoTotal} (${params.monto})`);
-  console.log(`Base 12%: ${montoBase12} (${params.montoBaseIva})`);
-  console.log(`Base 0%: ${montoBase0} (${params.montoBaseNoIva})`);
+  console.log(`Base IVA%: ${montoBase12} (${params.montoBaseIva})`);
+  console.log(`Base No IVA%: ${montoBase0} (${params.montoBaseNoIva})`);
   console.log(`IVA: ${impuestoIva} (${params.iva})`);
   console.log(`Hora: ${hora}`);
   console.log(`Fecha: ${fecha}`);
   console.log(`MID: '${mid}'`);
   console.log(`TID: '${tid}'`);
   console.log(`CID: '${cid}'`);
-  console.log(`Factura: '${numeroFactura}'`);
+  console.log(`Factura: '${numeroFactura || "No disponible"}'`);
   console.log(`Security: ${securityComponent}`);
   console.log(`Longitud total: ${frameWithSecurity.length}`);
   console.log(`===================\n`);
