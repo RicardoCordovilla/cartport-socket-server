@@ -6,7 +6,7 @@ interface WebSocketWithId extends WebSocket {
 }
 
 interface MessageData {
-  to?: "esp" | "web" | "all";
+  to?: string;
   event?: string;
   from?: string;
   data?: {
@@ -47,26 +47,14 @@ export function initializeSocketService(wss: WebSocketServer) {
         } catch {
           console.error("❌ Error parsing JSON message");
           return;
+          
         }
-
-        // Enhanced routing based on 'to' field
-        const target = data.to || "all";
-
-        // Log based on message type or source
-        if (data.event === "webapp:message") {
-          console.log("📱 Mensaje desde webapp:", data);
-        } else if (data.event === "esp32:message" || data.from === "esp32") {
-          console.log("📡 Mensaje desde ESP32:", data);
-        }
+        console.log("📱 Mensaje desde cloud:", data);
 
         // Route messages to appropriate clients, avoiding echo to sender
         for (const client of wss.clients) {
           if (client.readyState !== WebSocket.OPEN || client === ws) continue;
-
-          // Send based on target specification
-          if (target === "all" || target === "web" || target === "esp") {
-            client.send(JSON.stringify(data));
-          }
+          client.send(JSON.stringify(data));
         }
       } catch (error) {
         console.error("❌ Error processing message:", error);
