@@ -1,3 +1,4 @@
+import { format } from "@formkit/tempo";
 import { getPinpadConfig } from "./pinpad.config";
 import { buildReverseFrame } from "./pinpad.helper";
 import {
@@ -222,14 +223,8 @@ export function buildPaymentFrame(params: {
 
   // Fecha y hora actual - IMPORTANTE: formato correcto
   const now = new Date();
-  const hora =
-    now.getHours().toString().padStart(2, "0") +
-    now.getMinutes().toString().padStart(2, "0") +
-    now.getSeconds().toString().padStart(2, "0");
-  const fecha =
-    now.getFullYear().toString() +
-    (now.getMonth() + 1).toString().padStart(2, "0") +
-    now.getDate().toString().padStart(2, "0");
+  const hora = format(now, "HHmmss");
+  const fecha = format(now, "YYYYMMDD");
 
   // Número de autorización - 6 caracteres (espacios para compras nuevas)
   const numeroAutorizacion = " ".repeat(6);
