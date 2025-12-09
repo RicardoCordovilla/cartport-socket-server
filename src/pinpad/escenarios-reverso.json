@@ -1,0 +1,54 @@
+{
+  "escenariosReverso": [
+    {
+      "id": "codigo_91",
+      "descripcion": "Entidad fuera de línea",
+      "condiciones": {
+        "codigoAutorizador": "91",
+        "mensajes": ["ENT. FUERA LINEA", "ENTIDAD FUERA DE LINEA"]
+      },
+      "tipoReverso": "04",
+      "autoReverse": true
+    },
+    {
+      "id": "codigo_12",
+      "descripcion": "Transacción inválida",
+      "condiciones": {
+        "codigoAutorizador": "12",
+        "mensajes": ["TRANS. INVALIDA", "TRANSACCION INVALIDA"]
+      },
+      "tipoReverso": "04",
+      "autoReverse": true
+    },
+    {
+      "id": "codigo_57",
+      "descripcion": "Transacción inválida",
+      "condiciones": {
+        "codigoAutorizador": "57",
+        "mensajes": ["TRANS. INVALIDA", "TRANSACCION INVALIDA"]
+      },
+      "tipoReverso": "04",
+      "autoReverse": true
+    },
+    {
+      "id": "no_hubo_respuesta",
+      "descripcion": "Sin respuesta del autorizador",
+      "condiciones": {
+        "responseCode": "20",
+        "mensajes": ["NO HUBO RESPUESTA"]
+      },
+      "tipoReverso": "04",
+      "autoReverse": true
+    },
+    {
+      "id": "perdida_comunicacion",
+      "descripcion": "Pérdida de comunicación",
+      "condiciones": {
+        "camposNulos": true,
+        "timeout": true
+      },
+      "tipoReverso": "04",
+      "autoReverse": true
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { format } from "@formkit/tempo";
 import { getPinpadConfig } from "./pinpad.config";
 import { buildReverseFrame } from "./pinpad.helper";
+import { transactionMemoryService } from "./transaction-memory.service";
 import {
   calculateSecurityComponent,
   parsePaymentResponse,
@@ -154,9 +155,18 @@ export function buildBasicConfigFrame(): string {
 }
 
 /**
- * Construye la trama de lectura de tarjeta
+ * Construye la trama de lectura de tarjeta y almacena datos en memoria
  */
-export function buildReadCardFrame(): string {
+export function buildReadCardFrame(transactionData?: {
+  monto: number;
+  montoBaseIva: number;
+  montoBaseNoIva: number;
+  iva: number;
+  mid: string;
+  tid: string;
+  cid: string;
+  numeroFactura?: string;
+}): { frame: string; transactionId?: string } {
   const tipo = "LT";
   const frame = tipo;
 
@@ -164,21 +174,34 @@ export function buildReadCardFrame(): string {
   const securityComponent = calculateSecurityComponent(frame);
   const frameWithSecurity = frame + securityComponent;
 
+  let transactionId: string | undefined;
+
+  // Si se proporcionan datos de transacción, almacenarlos en memoria
+  if (transactionData) {
+    transactionId = transactionMemoryService.almacenarTransaccion(transactionData);
+    console.log(`💾 Datos de transacción almacenados para lectura de tarjeta: ${transactionId}`);
+  }
+
   console.log(`\n=== DEBUG LECTURA TARJETA ===`);
   console.log(`Frame: ${frame}`);
   console.log(`Security: ${securityComponent}`);
   console.log(`Total: ${frameWithSecurity.length} chars`);
+  console.log(`Transaction ID: ${transactionId || 'No almacenado'}`);
   console.log(`=============================\n`);
 
   const lengthHex = frameWithSecurity.length
     .toString(16)
     .padStart(4, "0")
     .toUpperCase();
-  return lengthHex + frameWithSecurity;
+  
+  return { 
+    frame: lengthHex + frameWithSecurity, 
+    transactionId 
+  };
 }
 
 /**
- * Construye la trama de proceso de pago
+ * Construye la trama de proceso de pago y almacena en memoria
  */
 export function buildPaymentFrame(params: {
   monto: number;
@@ -189,7 +212,10 @@ export function buildPaymentFrame(params: {
   tid: string;
   cid: string;
   numeroFactura?: string;
-}): string {
+}): { frame: string; transactionId: string } {
+  // Almacenar transacción en memoria antes de construir la trama
+  const transactionId = transactionMemoryService.almacenarTransaccion(params);
+
   // Tipo de mensaje y transacción
   const tipo = "PP";
   const tipoTransaccion = "01"; // Compra corriente
@@ -282,6 +308,7 @@ export function buildPaymentFrame(params: {
 
   // Total esperado: 220 + 32 = 252 caracteres
   console.log(`\n=== DEBUG TRAMA PAGO ===`);
+  console.log(`Transaction ID: ${transactionId}`);
   console.log(`Longitud sin seguridad: ${frame.length} (esperado: 220)`);
   console.log(`Tipo: ${tipo}`);
   console.log(`Transacción: ${tipoTransaccion}`);
@@ -307,7 +334,10 @@ export function buildPaymentFrame(params: {
     .padStart(4, "0")
     .toUpperCase();
 
-  return lengthHex + frameWithSecurity;
+  return { 
+    frame: lengthHex + frameWithSecurity, 
+    transactionId 
+  };
 }
 
 export const executeReverse = async (params: {

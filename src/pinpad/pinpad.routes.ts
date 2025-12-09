@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { processReverse, requestPayment } from "./pinpad.service";
+import { 
+  processReverse, 
+  requestPayment, 
+  getTransactionsInMemory, 
+  clearCompletedTransactions 
+} from "./pinpad.service";
 import { 
   getPinpadConfig, 
   updatePinpadConfig, 
@@ -284,5 +289,9 @@ router.post("/config/logs", (req, res) => {
     });
   }
 });
+
+// Nuevos endpoints para gestión de transacciones en memoria
+router.get("/transactions/memory", getTransactionsInMemory);
+router.delete("/transactions/memory/completed", clearCompletedTransactions);
 
 export default router;

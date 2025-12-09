@@ -1,0 +1,32 @@
+EJEMPLO (12 TRANS INVALIDA)
+
+15/4/2025_11:17:51: Informativo: PA: Trama generada: PP01100     000000003450000000003000000000000000000000000450                                          11174720250415      1791310199     NP320056caja1                                                                          USUARIO: 
+15/4/2025_11:17:59: Informativo: PP: Resultado: PP000112TRANS. INVALIDA     00002800003011174720250415      NP3200561791310199                                                                                                                                  DINERS CLUB              06DINERS/CARDMEMBER                                   DINERS CLUB         A0000001523010                                           8D5F7462DB2775CC00800080004800360218XXXXX840               30EA3429F7A23C22AB0654BA8F0AAC350093C3D8BD2DFD3C9624A7DC347FD671                           E7ED    USUARIO: 
+15/4/2025_11:18:16: Informativo: PA: Trama generada: PP04100     000000003450000000003000000000000000000000000450                                          11174720250415      1791310199     NP320056caja1                                                                          USUARIO: 
+15/4/2025_11:18:19: Informativo: PP: Resultado: PP000100APROBADA TRANS.                 11174720250415      NP3200561791310199                                                                                                                                                                                                                                                                                                                                                                                                                                                    E1BC    USUARIO: 
+
+EJEMPLO (20 NO HUBO RESPUESTA)
+
+15/4/2025_11:04:19: Informativo: PA: Trama generada: PP01100     000000007950000000004304000000003000000000000646                                          11040020250415      1791310199     NP320056caja1                                                                          USUARIO: 
+15/4/2025_11:04:28: Informativo: PP: Resultado: PP200100NO HUBO RESPUESTA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         E882    USUARIO:  
+15/4/2025_11:05:44: Informativo: PA: Trama generada: PP04100     000000007950000000004304000000003000000000000646                                          11040020250415      1791310199     NP320056caja1                                                                          USUARIO:  
+15/4/2025_11:05:48: Informativo: PP: Resultado: PP200100NO HUBO RESPUESTA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         9F21    USUARIO: 
+
+EJEMPLO (COD 91 ENTIDAD FUERA DE LINEA)
+ 
+15/4/2025_11:40:55: Informativo: PA: Trama generada: PP01100     000000000115000000000100000000000000000000000015                                          11405520250415      1791310199     NP320056caja1                                                                          USUARIO: 
+15/4/2025_11:41:02: Informativo: PP: Resultado: PP000191ENT. FUERA LINEA    00003300003011405520250415      NP320056000000332976                                                                                                                                MASTERCARD               06                                                    Mastercard          A0000000041010                                           150E64386E963F150000008001E000518968XXXXXXX130             1EBFCAC19C13D49A7D777A16157BD9FD77F29CA7EC4F9790E88CDC8DE8B7390F                           7CFE    USUARIO: 
+15/4/2025_11:41:02: Informativo: PA: Trama generada: PP04100     000000000115000000000100000000000000000000000015                                          11405520250415      1791310199     NP320056caja1                                                                          USUARIO: 
+15/4/2025_11:41:05: Informativo: PP: Resultado: PP000100APROBADA TRANS.                 11405520250415      NP3200561791310199                                                                                                                                                                                                                                                                                                                                                                                                                                                    16CA    USUARIO: 
+
+
+1er escenario código 91.
+En este escenario debe validarse el mensaje de respuesta “código de autorizador : 91; para poder enviar los reversos desde la caja
+
+2do escenario código 12 o 57 (transacción invalida)
+En este escenario debe validarse el mensaje de respuesta “código de autorizador : 12 o 57 ; para poder enviar los reversos desde la caja
+
+3er escenario no hubo respuesta.
+En este tipo de mensaje se debe validar el response code igual a 20 con la leyenda :no hubo respuesta; para poder enviar los reversos de caja.
+
+Tambien debe aplicarse en caso de perdida de comunicacion durante el proceso de pago, campos NULL y/o vacíos.
