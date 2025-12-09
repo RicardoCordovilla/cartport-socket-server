@@ -169,7 +169,8 @@ async function intentarReversoAutomatico(
   transaction: any, 
   escenario: any
 ): Promise<any> {
-  const maxIntentos = 3;
+
+  const maxIntentos = 1; // Número máximo de intentos de reverso
   let intento = 1;
 
   while (intento <= maxIntentos) {
