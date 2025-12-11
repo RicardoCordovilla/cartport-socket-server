@@ -1,5 +1,5 @@
 {
-  "host": "192.168.0.102",
+  "host": "192.168.100.24",
   "port": 9999,
   "timeout": 60000,
   "merchantData": {
@@ -13,5 +13,5 @@
     "gateway": "192.168.100.1"
   },
   "securityData": "B12D3D63069BD9EB05B7BBEEAA228ABC",
-  "logApiUrl": "http://192.168.0.104:9000/pinpadlogs"
+  "logApiUrl": "https://cartport-socket-server-production.up.railway.app/pinpadlogs"
 }

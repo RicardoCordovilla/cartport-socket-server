@@ -73,3 +73,12 @@ export interface RecaudacionTicketData {
     totalAmountCalculated: number;
   };
 }
+
+export interface CancellationTicketData {
+  stationId: number;
+  ticketNumber: string;
+  date: string;
+  pagado: number;
+  cambio: number;
+  error: number;
+}

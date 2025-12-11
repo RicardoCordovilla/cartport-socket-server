@@ -89,6 +89,77 @@ Content-Type: application/json
 POST /pinpad/config/reset
 ```
 
+# Configuración Dinámica de la Impresora
+
+El servidor también incluye un sistema de configuración dinámica para la impresora que permite personalizar la información de la empresa que aparece en los tickets.
+
+## Endpoints de Configuración de Impresora
+
+### 1. Obtener Configuración Actual de Impresora
+```http
+GET /printer/config
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Configuración actual de la impresora",
+  "isComplete": true,
+  "data": {
+    "companyLines": {
+      "line1": "SERVICIOS DE GESTION AEROPORTUARIA",
+      "line2": "AEROGERPSA S.A.",
+      "address": "Via a Tababela",
+      "location": "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
+      "phone": "022818462"
+    }
+  }
+}
+```
+
+### 2. Configurar Información de la Empresa
+```http
+POST /printer/config/company
+Content-Type: application/json
+
+{
+  "line1": "SERVICIOS DE GESTION AEROPORTUARIA",
+  "line2": "AEROGERPSA S.A.",
+  "address": "Via a Tababela",
+  "location": "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
+  "phone": "022818462"
+}
+```
+
+### 3. Configuración Completa de Impresora
+```http
+POST /printer/config
+Content-Type: application/json
+
+{
+  "companyLines": {
+    "line1": "SERVICIOS DE GESTION AEROPORTUARIA",
+    "line2": "AEROGERPSA S.A.",
+    "address": "Via a Tababela",
+    "location": "AEROPUERTO INT. MARISCAL SUCRE - QUITO",
+    "phone": "022818462"
+  },
+  "footerText": "Texto adicional opcional",
+  "websiteUrl": "www.empresa.com"
+}
+```
+
+### 4. Reiniciar Configuración de Impresora
+```http
+POST /printer/config/reset
+```
+
+### 5. Eliminar Archivo de Configuración de Impresora
+```http
+DELETE /printer/config/file
+```
+
 ## Flujo de Configuración Recomendado
 
 1. **Iniciar el servidor** (ya no necesita .env)
@@ -104,7 +175,20 @@ POST /pinpad/config/reset
      }'
    ```
 
-3. **Configurar red si es necesario**:
+3. **Configurar información de impresora**:
+   ```bash
+   curl -X POST http://localhost:3000/printer/config/company \
+     -H "Content-Type: application/json" \
+     -d '{
+       "line1": "MI EMPRESA S.A.",
+       "line2": "NOMBRE COMERCIAL",
+       "address": "Mi Dirección 123",
+       "location": "MI CIUDAD - MI PAÍS",
+       "phone": "0999999999"
+     }'
+   ```
+
+4. **Configurar red si es necesario**:
    ```bash
    curl -X POST http://localhost:3000/pinpad/config/network \
      -H "Content-Type: application/json" \
@@ -114,12 +198,13 @@ POST /pinpad/config/reset
      }'
    ```
 
-4. **Verificar configuración**:
+5. **Verificar configuración**:
    ```bash
    curl http://localhost:3000/pinpad/config
+   curl http://localhost:3000/printer/config
    ```
 
-5. **Procesar pagos** (los endpoints existentes siguen funcionando igual)
+6. **Procesar pagos e imprimir tickets** (los endpoints existentes siguen funcionando igual)
 
 ## Ventajas del Nuevo Sistema
 
@@ -128,12 +213,20 @@ POST /pinpad/config/reset
 ✅ **Múltiples computadoras con diferentes configuraciones**
 ✅ **Fácil gestión remota**
 ✅ **Validación de configuración antes de procesar pagos**
+✅ **Personalización de tickets de impresora**
+✅ **Información de empresa configurable dinámicamente**
 
 ## Validaciones Automáticas
 
+### PinPad:
 - El sistema verifica que `MID`, `TID` y `securityData` estén configurados antes de procesar pagos
 - Si falta configuración, los endpoints devuelven error con instrucciones
 - La configuración se valida en tiempo real
+
+### Impresora:
+- El sistema verifica que toda la información de la empresa esté completa
+- Los tickets se generan automáticamente con la información configurada
+- Cambios de configuración se aplican inmediatamente a nuevos tickets
 
 ## Ejemplo de Uso en JavaScript
 
@@ -152,7 +245,25 @@ async function configurePinpad() {
   });
   
   const result = await response.json();
-  console.log('Configuración:', result);
+  console.log('Configuración PinPad:', result);
+}
+
+// Configurar impresora
+async function configurePrinter() {
+  const response = await fetch('http://localhost:3000/printer/config/company', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      line1: "MI EMPRESA S.A.",
+      line2: "NOMBRE COMERCIAL",
+      address: "Mi Dirección 123",
+      location: "MI CIUDAD - MI PAÍS",
+      phone: "0999999999"
+    })
+  });
+  
+  const result = await response.json();
+  console.log('Configuración Impresora:', result);
 }
 
 // Procesar pago (igual que antes)
@@ -169,7 +280,16 @@ Si anteriormente usabas variables de entorno, simplemente:
 
 1. Elimina o renombra el archivo `.env` 
 2. Usa los endpoints HTTP para configurar los mismos valores
-3. Los endpoints de pago siguen funcionando igual
+3. Los endpoints de pago e impresión siguen funcionando igual
+
+## Archivos de Configuración
+
+Los sistemas crean automáticamente archivos de configuración persistentes:
+
+- **`pinpad-config.json`** - Configuración del PinPad
+- **`printer-config.json`** - Configuración de la impresora
+
+Estos archivos se crean automáticamente y se cargan al iniciar el servidor.
 
 ## Valores del .env Original
 
