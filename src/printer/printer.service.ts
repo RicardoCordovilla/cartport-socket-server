@@ -415,7 +415,7 @@ export const printCancellation = async (req: Request, res: Response) => {
     ) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: stationId, ticketNumber, date, pagado, cambio, error",
+        error: "Se requiere los campos: stationId, ticketNumber, date, pagado, cambio, error",
       });
     }
 
