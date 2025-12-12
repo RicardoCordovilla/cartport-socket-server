@@ -201,7 +201,7 @@ export function generateRecaudacionTicketContent(data: RecaudacionTicketData): B
       data.resumen.totalTen * 10
     ).toFixed(2)} $`),
     createSeparator(),
-    createLine(`VENTA TOTAL        :   ${(data.resumen.totalCartsSoldSession * 3).toFixed(2)} $`),
+    createLine(`VENTA TOTAL        :   ${(data.resumen.totalAmountCalculated).toFixed(2)} $`),
     createSeparator(),
     createLine(`ERROR DEVOLUCION        :     0.00 $`),
     createSeparator(),
