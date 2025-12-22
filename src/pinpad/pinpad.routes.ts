@@ -6,7 +6,8 @@ import {
   clearCompletedTransactions,
   initPinpad,
   initPinpadBasic,
-  processControl
+  processControl,
+  readCard
 } from "./pinpad.service";
 import { 
   getPinpadConfig, 
@@ -27,6 +28,9 @@ router.post("/init/basic", initPinpadBasic);
 
 // Endpoint para proceso de control del PinPad (PC)
 router.post("/control", processControl);
+
+// Endpoint para lectura de tarjeta (LT)
+router.post("/read-card", readCard);
 
 // Endpoints existentes
 router.post("/payment", requestPayment);

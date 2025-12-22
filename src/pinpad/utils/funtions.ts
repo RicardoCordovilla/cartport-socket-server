@@ -261,6 +261,159 @@ export function parseControlResponse(response: string): {
   }
 }
 
+/**
+ * Parsea la respuesta de lectura de tarjeta del PinPad (LT)
+ * Estructura de respuesta según documentación:
+ * - Tipo de mensaje (02 AN): "LT" = Lectura de Tarjeta
+ * - Código de respuesta (02 AN): 
+ *   - "00" = Lectura exitosa
+ *   - "01" = Error en trama
+ *   - "02" = Error conexión Pinpad
+ *   - "20" = Error durante proceso / Tarjeta no leída
+ *   - "ER" = Error conexión Pinpad
+ * - Modo de lectura (02 AN): "B" = Banda, "C" = Chip, "L" = Contactless
+ * - BIN de tarjeta (06 AN): Primeros 6 dígitos de la tarjeta
+ * - Tarjeta truncada (25 AN): Número de tarjeta enmascarado
+ * - Fecha de vencimiento (04 AN): MMYY
+ * - Nombre del tarjetahabiente (40 AN): Nombre del cliente
+ * - Código de banco (03 AN): Código del banco emisor
+ * - Nombre del banco (30 AN): Nombre del banco emisor
+ * - Nombre grupo tarjeta (25 AN): Tipo de tarjeta (VISA, MASTERCARD, etc.)
+ * - Track II encriptado (variable): Datos encriptados de la tarjeta
+ */
+export function parseReadCardResponse(response: string): {
+  success: boolean;
+  message: string;
+  data: {
+    tipoMensaje: string;
+    codigoRespuesta: string;
+    modoLectura: string;
+    binTarjeta: string;
+    tarjetaTruncada: string;
+    fechaVencimiento: string;
+    nombreTarjetahabiente: string;
+    codigoBanco: string;
+    nombreBanco: string;
+    nombreGrupoTarjeta: string;
+    trackIIEncriptado: string;
+  };
+  rawResponse: string;
+} {
+  try {
+    // Remover los primeros 4 caracteres (longitud en hex)
+    const data = response.substring(4);
+
+    const tipoMensaje = data.substring(0, 2);
+    const codigoRespuesta = data.substring(2, 4);
+    
+    // Si hay error, los demás campos pueden no estar presentes
+    if (codigoRespuesta !== "00") {
+      let mensajeError = "Error en lectura de tarjeta";
+      switch (codigoRespuesta) {
+        case "01":
+          mensajeError = "Error en trama";
+          break;
+        case "02":
+        case "ER":
+          mensajeError = "Error conexión Pinpad";
+          break;
+        case "20":
+          mensajeError = "Tarjeta no leída o cancelado por usuario";
+          break;
+        default:
+          mensajeError = "Error desconocido";
+      }
+      
+      return {
+        success: false,
+        message: mensajeError,
+        data: {
+          tipoMensaje,
+          codigoRespuesta,
+          modoLectura: "",
+          binTarjeta: "",
+          tarjetaTruncada: "",
+          fechaVencimiento: "",
+          nombreTarjetahabiente: "",
+          codigoBanco: "",
+          nombreBanco: "",
+          nombreGrupoTarjeta: "",
+          trackIIEncriptado: "",
+        },
+        rawResponse: response,
+      };
+    }
+
+    // Parsear campos de respuesta exitosa
+    let offset = 4; // Después de tipo mensaje y código respuesta
+    
+    const modoLectura = data.substring(offset, offset + 2).trim();
+    offset += 2;
+    
+    const binTarjeta = data.substring(offset, offset + 6).trim();
+    offset += 6;
+    
+    const tarjetaTruncada = data.substring(offset, offset + 25).trim();
+    offset += 25;
+    
+    const fechaVencimiento = data.substring(offset, offset + 4).trim();
+    offset += 4;
+    
+    const nombreTarjetahabiente = data.substring(offset, offset + 40).trim();
+    offset += 40;
+    
+    const codigoBanco = data.substring(offset, offset + 3).trim();
+    offset += 3;
+    
+    const nombreBanco = data.substring(offset, offset + 30).trim();
+    offset += 30;
+    
+    const nombreGrupoTarjeta = data.substring(offset, offset + 25).trim();
+    offset += 25;
+    
+    // El resto es el track II encriptado (variable)
+    const trackIIEncriptado = data.substring(offset).trim();
+
+    return {
+      success: true,
+      message: "Lectura de tarjeta exitosa",
+      data: {
+        tipoMensaje,
+        codigoRespuesta,
+        modoLectura,
+        binTarjeta,
+        tarjetaTruncada,
+        fechaVencimiento,
+        nombreTarjetahabiente,
+        codigoBanco,
+        nombreBanco,
+        nombreGrupoTarjeta,
+        trackIIEncriptado,
+      },
+      rawResponse: response,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error al parsear respuesta de lectura de tarjeta",
+      data: {
+        tipoMensaje: "",
+        codigoRespuesta: "",
+        modoLectura: "",
+        binTarjeta: "",
+        tarjetaTruncada: "",
+        fechaVencimiento: "",
+        nombreTarjetahabiente: "",
+        codigoBanco: "",
+        nombreBanco: "",
+        nombreGrupoTarjeta: "",
+        trackIIEncriptado: "",
+      },
+      rawResponse: response,
+    };
+  }
+}
+
 export async function logPinPadOperation(logData: PaymentResponseData) {
   try {
     // Obtener configuración actual para la URL del API de logs

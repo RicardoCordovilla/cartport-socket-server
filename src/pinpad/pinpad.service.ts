@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { getPinpadConfig } from "./pinpad.config";
-import { buildPaymentFrame, executeReverse, buildConfigFrame, buildBasicConfigFrame, buildControlFrame } from "./pinpad.controller";
+import { buildPaymentFrame, executeReverse, buildConfigFrame, buildBasicConfigFrame, buildControlFrame, buildReadCardFrame } from "./pinpad.controller";
 import { transactionMemoryService } from "./transaction-memory.service";
 import {
   logPinPadOperation,
   parsePaymentResponse,
   parseConfigResponse,
   parseControlResponse,
+  parseReadCardResponse,
   sendToPinPad,
 } from "./utils/funtions";
 
@@ -628,6 +629,95 @@ function getControlErrorDescription(codigoRespuesta: string): string {
     "01": "Error en trama",
     "02": "Error conexión Pinpad",
     "20": "Error durante proceso",
+    "ER": "Error conexión Pinpad",
+  };
+  return errores[codigoRespuesta] || "Error desconocido";
+}
+
+/**
+ * Lectura de Tarjeta (LT)
+ * Trama tipo "LT" - Lectura de Tarjeta
+ * 
+ * Este endpoint permite leer los datos de una tarjeta (chip, banda magnética o contactless)
+ * sin realizar una transacción de pago.
+ * 
+ * Respuesta según documentación:
+ * - Tipo de mensaje (02 AN): "LT" = Lectura de Tarjeta
+ * - Código de respuesta de mensaje (02 AN): 
+ *   - "00" = Lectura exitosa
+ *   - "01" = Error en trama
+ *   - "02" = Error conexión Pinpad
+ *   - "20" = Error durante proceso / Tarjeta no leída
+ *   - "ER" = Error conexión Pinpad
+ * - Datos de tarjeta (variable): Información de la tarjeta leída
+ */
+export const readCard = async (req: Request, res: Response) => {
+  try {
+    console.log("💳 Ejecutando lectura de tarjeta (LT)...");
+
+    // Construir la trama de lectura de tarjeta (LT)
+    // buildReadCardFrame no requiere parámetros para lectura simple
+    const { frame } = buildReadCardFrame();
+
+    console.log("📤 Enviando trama de lectura de tarjeta al PinPad...");
+    console.log("📋 Trama:", frame);
+
+    // Enviar al PinPad
+    const response = await sendToPinPad(frame);
+    
+    // Parsear la respuesta usando parseReadCardResponse
+    const parsedResponse = parseReadCardResponse(response);
+
+    console.log("📥 Respuesta del PinPad:", parsedResponse);
+
+    if (parsedResponse.success) {
+      res.json({
+        success: true,
+        message: "Lectura de tarjeta exitosa",
+        data: {
+          tipoTrama: "LT",
+          ...parsedResponse.data,
+        },
+        rawResponse: response,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Error en lectura de tarjeta",
+        error: parsedResponse.message,
+        data: {
+          tipoTrama: "LT",
+          codigoErrorDescripcion: getReadCardErrorDescription(parsedResponse.data?.codigoRespuesta),
+          ...parsedResponse.data,
+        },
+        rawResponse: response,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error al ejecutar lectura de tarjeta:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al ejecutar lectura de tarjeta",
+      details: error instanceof Error ? error.message : "Error desconocido",
+    });
+  }
+};
+
+/**
+ * Obtiene la descripción del código de error de lectura de tarjeta
+ */
+function getReadCardErrorDescription(codigoRespuesta: string | undefined): string {
+  if (!codigoRespuesta) return "Código de respuesta no disponible";
+  
+  const errores: Record<string, string> = {
+    "00": "Lectura exitosa",
+    "01": "Error en trama",
+    "02": "Error conexión Pinpad",
+    "20": "Error durante proceso / Tarjeta no leída",
+    "21": "Timeout - Tarjeta no insertada/deslizada",
+    "22": "Tarjeta no soportada",
+    "23": "Error de lectura de chip",
+    "24": "Error de lectura de banda",
     "ER": "Error conexión Pinpad",
   };
   return errores[codigoRespuesta] || "Error desconocido";
