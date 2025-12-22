@@ -3,7 +3,8 @@ import {
   processReverse, 
   requestPayment, 
   getTransactionsInMemory, 
-  clearCompletedTransactions 
+  clearCompletedTransactions,
+  initPinpad
 } from "./pinpad.service";
 import { 
   getPinpadConfig, 
@@ -15,6 +16,9 @@ import {
 } from "./pinpad.config";
 
 const router = Router();
+
+// Endpoint para inicializar el PinPad (Configuración de red)
+router.post("/init", initPinpad);
 
 // Endpoints existentes
 router.post("/payment", requestPayment);

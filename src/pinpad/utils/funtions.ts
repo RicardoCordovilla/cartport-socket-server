@@ -129,6 +129,58 @@ export function parsePaymentResponse(response: string): PaymentResponse {
   }
 }
 
+/**
+ * Parsea la respuesta de configuración del PinPad (CP)
+ * Estructura de respuesta:
+ * - Tipo Mensaje (2 AN): "CP"
+ * - Código Respuesta (2 N): "00" = éxito
+ * - Mensaje Respuesta (20 AN): Descripción del resultado
+ * - Componente Seguridad (32 AN): Hash de seguridad
+ */
+export function parseConfigResponse(response: string): {
+  success: boolean;
+  message: string;
+  data: {
+    tipoMensaje: string;
+    codigoRespuesta: string;
+    mensajeRespuesta: string;
+  };
+  rawResponse: string;
+} {
+  try {
+    // Remover los primeros 4 caracteres (longitud en hex)
+    const data = response.substring(4);
+
+    const tipoMensaje = data.substring(0, 2);
+    const codigoRespuesta = data.substring(2, 4);
+    const mensajeRespuesta = data.substring(4, 24).trim();
+
+    const success = codigoRespuesta === "00";
+
+    return {
+      success,
+      message: success ? "Configuración aplicada correctamente" : mensajeRespuesta,
+      data: {
+        tipoMensaje,
+        codigoRespuesta,
+        mensajeRespuesta,
+      },
+      rawResponse: response,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error al parsear respuesta de configuración",
+      data: {
+        tipoMensaje: "",
+        codigoRespuesta: "",
+        mensajeRespuesta: "Respuesta inválida",
+      },
+      rawResponse: response,
+    };
+  }
+}
+
 export async function logPinPadOperation(logData: PaymentResponseData) {
   try {
     // Obtener configuración actual para la URL del API de logs

@@ -1,12 +1,68 @@
 import { NextFunction, Request, Response } from "express";
 import { getPinpadConfig } from "./pinpad.config";
-import { buildPaymentFrame, executeReverse } from "./pinpad.controller";
+import { buildPaymentFrame, executeReverse, buildConfigFrame, buildBasicConfigFrame } from "./pinpad.controller";
 import { transactionMemoryService } from "./transaction-memory.service";
 import {
   logPinPadOperation,
   parsePaymentResponse,
+  parseConfigResponse,
   sendToPinPad,
 } from "./utils/funtions";
+
+/**
+ * Inicializa el PinPad con configuración básica
+ * Trama tipo "CB" - Configuración Básica
+ * Nota: La trama CP requiere estructura específica. Usar CB como alternativa.
+ */
+export const initPinpad = async (req: Request, res: Response) => {
+  try {
+    // Obtener configuración actual
+    const config = getPinpadConfig();
+
+    console.log("🔧 Inicializando PinPad con configuración básica (CB)...");
+
+    // Construir la trama de configuración básica (CB)
+    const frame = buildBasicConfigFrame();
+
+    console.log("📤 Enviando trama de configuración básica al PinPad...");
+    console.log("📋 Trama:", frame);
+
+    // Enviar al PinPad
+    const response = await sendToPinPad(frame);
+    
+    // Parsear la respuesta
+    const parsedResponse = parseConfigResponse(response);
+
+    console.log("📥 Respuesta del PinPad:", parsedResponse);
+
+    if (parsedResponse.success) {
+      res.json({
+        success: true,
+        message: "PinPad inicializado correctamente (Configuración Básica)",
+        data: {
+          tipoTrama: "CB",
+          response: parsedResponse.data,
+        },
+        rawResponse: response,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Error al inicializar PinPad",
+        error: parsedResponse.message,
+        data: parsedResponse.data,
+        rawResponse: response,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error al inicializar PinPad:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al inicializar el PinPad",
+      details: error instanceof Error ? error.message : "Error desconocido",
+    });
+  }
+};
 
 export const requestPayment = async (req: Request, res: Response) => {
   let transactionId: string | undefined;

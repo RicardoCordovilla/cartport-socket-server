@@ -9,47 +9,18 @@ import {
 } from "./utils/funtions";
 
 /**
- * Construye la trama de configuración del PinPad con componente de seguridad
+ * Construye la trama de configuración del PinPad (CP)
+ * Según documentación Datafast, la trama CP es simple como CB y LT
+ * Solo envía el tipo de mensaje + componente de seguridad
  */
 export function buildConfigFrame(
   ip: string,
   mask: string,
   gateway: string
 ): string {
-  const config = getPinpadConfig();
+  // La trama CP parece ser simple como CB (Configuración Básica)
   const tipo = "CP";
-  const ipPadded = ip.padEnd(15, " ");
-  const maskPadded = mask.padEnd(15, " ");
-  const gatewayPadded = gateway.padEnd(15, " ");
-
-  // Host y puerto (espacios en blanco para usar valores por defecto)
-  const hostPrimary = "".padEnd(15, " ");
-  const portPrimary = "".padEnd(6, " ");
-  const hostAlternate = "".padEnd(15, " ");
-  const portAlternate = "".padEnd(6, " ");
-
-  // Fillers
-  const filler1 = "".padEnd(15, " ");
-  const filler2 = "".padEnd(6, " ");
-  const filler3 = "".padEnd(15, " ");
-  const filler4 = "".padEnd(6, " ");
-
-  const listenPort = config.port.toString().padStart(6, "0");
-
-  const frame =
-    tipo +
-    ipPadded +
-    maskPadded +
-    gatewayPadded +
-    hostPrimary +
-    portPrimary +
-    hostAlternate +
-    portAlternate +
-    filler1 +
-    filler2 +
-    filler3 +
-    filler4 +
-    listenPort;
+  const frame = tipo;
 
   // Agregar componente de seguridad
   const securityComponent = calculateSecurityComponent(frame);
@@ -61,11 +32,14 @@ export function buildConfigFrame(
     .padStart(4, "0")
     .toUpperCase();
 
-  console.log(`\n=== DEBUG CONFIG FRAME ===`);
+  console.log(`\n=== DEBUG CONFIG FRAME (CP) ===`);
+  console.log(`Tipo: ${tipo}`);
   console.log(`Frame sin seguridad: ${frame.length} chars`);
   console.log(`Security component: ${securityComponent}`);
   console.log(`Frame completo: ${frameWithSecurity.length} chars`);
-  console.log(`===========================\n`);
+  console.log(`Longitud hex: ${lengthHex}`);
+  console.log(`Trama final: ${lengthHex + frameWithSecurity}`);
+  console.log(`================================\n`);
 
   return lengthHex + frameWithSecurity;
 }
