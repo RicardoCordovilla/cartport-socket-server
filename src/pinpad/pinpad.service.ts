@@ -1,11 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { getPinpadConfig } from "./pinpad.config";
-import { buildPaymentFrame, executeReverse, buildConfigFrame, buildBasicConfigFrame } from "./pinpad.controller";
+import { buildPaymentFrame, executeReverse, buildConfigFrame, buildBasicConfigFrame, buildControlFrame } from "./pinpad.controller";
 import { transactionMemoryService } from "./transaction-memory.service";
 import {
   logPinPadOperation,
   parsePaymentResponse,
   parseConfigResponse,
+  parseControlResponse,
   sendToPinPad,
 } from "./utils/funtions";
 
@@ -513,3 +514,121 @@ export const clearCompletedTransactions = async (req: Request, res: Response) =>
     });
   }
 };
+
+/**
+ * Proceso de Control del PinPad (PC)
+ * Trama tipo "PC" - Proceso de Control
+ * 
+ * Respuesta según documentación:
+ * - Tipo de mensaje (02 AN): "PC" = Proceso de control
+ * - Código de respuesta de mensaje (02 AN): 
+ *   - "00" = Ejecución exitosa
+ *   - "01" = Error en trama
+ *   - "02" = Error conexión Pinpad
+ *   - "20" = Error durante proceso
+ *   - "ER" = Error conexión Pinpad
+ * - Filler (02 AN): Filler
+ * - Mensaje de respuesta (20 AN): AUTORIZADO, ERROR EN TRAMA, ERR. CONEXIÓN PINPAD
+ */
+export const processControl = async (req: Request, res: Response) => {
+  try {
+    // Obtener parámetros del body
+    const {
+      lote = "000001",
+      secuencial = "000001",
+      cid = "CAJA001",
+      mid: midOverride,
+      tid: tidOverride,
+    } = req.body;
+
+    // Obtener configuración actual
+    const config = getPinpadConfig();
+
+    // Verificar que los datos del comercio estén configurados
+    if (!config.merchantData.mid || !config.merchantData.tid || !config.securityData) {
+      return res.status(400).json({
+        error: "Configuración del comercio incompleta",
+        message: "Debe configurar MID, TID y SecurityData primero",
+        hint: "Use POST /pinpad/config/merchant para configurar los datos del comercio"
+      });
+    }
+
+    const params = {
+      lote: lote as string,
+      secuencial: secuencial as string,
+      mid: (midOverride as string) || config.merchantData.mid,
+      tid: (tidOverride as string) || config.merchantData.tid,
+      cid: cid as string,
+    };
+
+    console.log("🔧 Ejecutando proceso de control del PinPad (PC)...");
+    console.log(`📋 Parámetros:`, params);
+
+    // Construir la trama de control (PC)
+    const frame = buildControlFrame(params);
+
+    console.log("📤 Enviando trama de control al PinPad...");
+    console.log("📋 Trama:", frame);
+
+    // Enviar al PinPad
+    const response = await sendToPinPad(frame);
+    
+    // Parsear la respuesta usando parseControlResponse
+    const parsedResponse = parseControlResponse(response);
+
+    console.log("📥 Respuesta del PinPad:", parsedResponse);
+
+    if (parsedResponse.success) {
+      res.json({
+        success: true,
+        message: "Proceso de control ejecutado correctamente",
+        data: {
+          tipoTrama: "PC",
+          parametrosEnviados: params,
+          tipoMensaje: parsedResponse.data.tipoMensaje,
+          codigoRespuesta: parsedResponse.data.codigoRespuesta,
+          filler: parsedResponse.data.filler,
+          mensajeRespuesta: parsedResponse.data.mensajeRespuesta,
+        },
+        rawResponse: response,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Error en proceso de control del PinPad",
+        error: parsedResponse.message,
+        data: {
+          tipoTrama: "PC",
+          parametrosEnviados: params,
+          tipoMensaje: parsedResponse.data.tipoMensaje,
+          codigoRespuesta: parsedResponse.data.codigoRespuesta,
+          codigoErrorDescripcion: getControlErrorDescription(parsedResponse.data.codigoRespuesta),
+          filler: parsedResponse.data.filler,
+          mensajeRespuesta: parsedResponse.data.mensajeRespuesta,
+        },
+        rawResponse: response,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error al ejecutar proceso de control:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al ejecutar proceso de control del PinPad",
+      details: error instanceof Error ? error.message : "Error desconocido",
+    });
+  }
+};
+
+/**
+ * Obtiene la descripción del código de error del proceso de control
+ */
+function getControlErrorDescription(codigoRespuesta: string): string {
+  const errores: Record<string, string> = {
+    "00": "Ejecución exitosa",
+    "01": "Error en trama",
+    "02": "Error conexión Pinpad",
+    "20": "Error durante proceso",
+    "ER": "Error conexión Pinpad",
+  };
+  return errores[codigoRespuesta] || "Error desconocido";
+}

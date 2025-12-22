@@ -181,6 +181,86 @@ export function parseConfigResponse(response: string): {
   }
 }
 
+/**
+ * Parsea la respuesta del proceso de control del PinPad (PC)
+ * Estructura de respuesta según documentación:
+ * - Tipo de mensaje (02 AN): "PC" = Proceso de control
+ * - Código de respuesta de mensaje (02 AN): 
+ *   - "00" = Ejecución exitosa
+ *   - "01" = Error en trama
+ *   - "02" = Error conexión Pinpad
+ *   - "20" = Error durante proceso
+ *   - "ER" = Error conexión Pinpad
+ * - Filler (02 AN): Filler
+ * - Mensaje de respuesta (20 AN): AUTORIZADO, ERROR EN TRAMA, ERR. CONEXIÓN PINPAD
+ */
+export function parseControlResponse(response: string): {
+  success: boolean;
+  message: string;
+  data: {
+    tipoMensaje: string;
+    codigoRespuesta: string;
+    filler: string;
+    mensajeRespuesta: string;
+  };
+  rawResponse: string;
+} {
+  try {
+    // Remover los primeros 4 caracteres (longitud en hex)
+    const data = response.substring(4);
+
+    const tipoMensaje = data.substring(0, 2);
+    const codigoRespuesta = data.substring(2, 4);
+    const filler = data.substring(4, 6);
+    const mensajeRespuesta = data.substring(6, 26).trim();
+
+    const success = codigoRespuesta === "00";
+
+    // Mapear códigos de error a mensajes descriptivos
+    let mensajeDescriptivo = mensajeRespuesta;
+    if (!success) {
+      switch (codigoRespuesta) {
+        case "01":
+          mensajeDescriptivo = mensajeRespuesta || "Error en trama";
+          break;
+        case "02":
+        case "ER":
+          mensajeDescriptivo = mensajeRespuesta || "Error conexión Pinpad";
+          break;
+        case "20":
+          mensajeDescriptivo = mensajeRespuesta || "Error durante proceso";
+          break;
+        default:
+          mensajeDescriptivo = mensajeRespuesta || "Error desconocido";
+      }
+    }
+
+    return {
+      success,
+      message: success ? "Proceso de control ejecutado correctamente" : mensajeDescriptivo,
+      data: {
+        tipoMensaje,
+        codigoRespuesta,
+        filler,
+        mensajeRespuesta,
+      },
+      rawResponse: response,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Error al parsear respuesta del proceso de control",
+      data: {
+        tipoMensaje: "",
+        codigoRespuesta: "",
+        filler: "",
+        mensajeRespuesta: "Respuesta inválida",
+      },
+      rawResponse: response,
+    };
+  }
+}
+
 export async function logPinPadOperation(logData: PaymentResponseData) {
   try {
     // Obtener configuración actual para la URL del API de logs

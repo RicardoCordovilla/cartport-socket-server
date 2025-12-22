@@ -5,7 +5,8 @@ import {
   getTransactionsInMemory, 
   clearCompletedTransactions,
   initPinpad,
-  initPinpadBasic
+  initPinpadBasic,
+  processControl
 } from "./pinpad.service";
 import { 
   getPinpadConfig, 
@@ -23,6 +24,9 @@ router.post("/init", initPinpad);
 
 // Endpoint para inicializar el PinPad con configuración básica (CB)
 router.post("/init/basic", initPinpadBasic);
+
+// Endpoint para proceso de control del PinPad (PC)
+router.post("/control", processControl);
 
 // Endpoints existentes
 router.post("/payment", requestPayment);
