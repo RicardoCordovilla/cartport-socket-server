@@ -10,19 +10,74 @@ import {
 
 /**
  * Construye la trama de configuración del PinPad (CP)
- * Según documentación Datafast, la trama CP es simple como CB y LT
- * Solo envía el tipo de mensaje + componente de seguridad
+ * Según documentación Datafast - Especificaciones PinPad Fastrack 1.6
+ * 
+ * Estructura de la trama CP (169 caracteres sin seguridad):
+ * - Tipo de mensaje: 02 AN - "CP"
+ * - Dirección IP: 15 AN - IP local del pinpad
+ * - Máscara: 15 AN - Máscara de red
+ * - Gateway: 15 AN - Gateway
+ * - IP Host principal Red 1: 15 AN
+ * - Puerto Host principal Red 1: 06 AN
+ * - IP Host alterna Red 1: 15 AN
+ * - Puerto Host alterno Red 1: 06 AN
+ * - IP Host principal Red 2: 15 AN
+ * - Puerto Host Red 2: 06 AN
+ * - IP Host alterna Red 2: 15 AN
+ * - Puerto Host alterno Red 2: 06 AN
+ * - Puerto de escucha: 06 N
+ * 
+ * Total: 2+15+15+15+(15+6)*4+6 = 2+45+84+6 = 137 caracteres
+ * Pero el ejemplo del PDF muestra 00A9 = 169, entonces hay 32 más (el security)
+ * 169 - 32 = 137 caracteres sin seguridad
  */
 export function buildConfigFrame(
   ip: string,
   mask: string,
-  gateway: string
+  gateway: string,
+  puertoEscucha?: string
 ): string {
-  // La trama CP parece ser simple como CB (Configuración Básica)
   const tipo = "CP";
-  const frame = tipo;
+  
+  // Campos principales (15 caracteres cada uno, justificados con blancos a la derecha)
+  const direccionIP = ip.substring(0, 15).padEnd(15, " ");
+  const mascara = mask.substring(0, 15).padEnd(15, " ");
+  const gatewayField = gateway.substring(0, 15).padEnd(15, " ");
+  
+  // Campos de Host Red 1 - NO MODIFICABLES POR EL COMERCIO (enviar blancos)
+  const ipHostPrincipalRed1 = " ".repeat(15);
+  const puertoHostPrincipalRed1 = " ".repeat(6);
+  const ipHostAlternaRed1 = " ".repeat(15);
+  const puertoHostAlternoRed1 = " ".repeat(6);
+  
+  // Campos de Host Red 2 - NO MODIFICABLES POR EL COMERCIO (enviar blancos)
+  const ipHostPrincipalRed2 = " ".repeat(15);
+  const puertoHostRed2 = " ".repeat(6);
+  const ipHostAlternaRed2 = " ".repeat(15);
+  const puertoHostAlternoRed2 = " ".repeat(6);
+  
+  // Puerto de escucha (6 N - ceros a la izquierda, espacios si no aplica)
+  const puertoEscuchaField = puertoEscucha 
+    ? puertoEscucha.padStart(6, "0") 
+    : " ".repeat(6);
 
-  // Agregar componente de seguridad
+  // Construir la trama en el orden exacto (137 caracteres)
+  const frame =
+    tipo +                      // 02 - CP
+    direccionIP +               // 15 - IP local
+    mascara +                   // 15 - Máscara
+    gatewayField +              // 15 - Gateway
+    ipHostPrincipalRed1 +       // 15 - IP Host principal Red 1
+    puertoHostPrincipalRed1 +   // 06 - Puerto Host principal Red 1
+    ipHostAlternaRed1 +         // 15 - IP Host alterna Red 1
+    puertoHostAlternoRed1 +     // 06 - Puerto Host alterno Red 1
+    ipHostPrincipalRed2 +       // 15 - IP Host principal Red 2
+    puertoHostRed2 +            // 06 - Puerto Host Red 2
+    ipHostAlternaRed2 +         // 15 - IP Host alterna Red 2
+    puertoHostAlternoRed2 +     // 06 - Puerto Host alterno Red 2
+    puertoEscuchaField;         // 06 - Puerto de escucha
+
+  // Agregar componente de seguridad (32 caracteres)
   const securityComponent = calculateSecurityComponent(frame);
   const frameWithSecurity = frame + securityComponent;
 
@@ -34,10 +89,14 @@ export function buildConfigFrame(
 
   console.log(`\n=== DEBUG CONFIG FRAME (CP) ===`);
   console.log(`Tipo: ${tipo}`);
-  console.log(`Frame sin seguridad: ${frame.length} chars`);
+  console.log(`Dirección IP: '${direccionIP}' (${direccionIP.length} chars)`);
+  console.log(`Máscara: '${mascara}' (${mascara.length} chars)`);
+  console.log(`Gateway: '${gatewayField}' (${gatewayField.length} chars)`);
+  console.log(`Puerto Escucha: '${puertoEscuchaField}' (${puertoEscuchaField.length} chars)`);
+  console.log(`Frame sin seguridad: ${frame.length} chars (esperado: 137)`);
   console.log(`Security component: ${securityComponent}`);
-  console.log(`Frame completo: ${frameWithSecurity.length} chars`);
-  console.log(`Longitud hex: ${lengthHex}`);
+  console.log(`Frame completo: ${frameWithSecurity.length} chars (esperado: 169)`);
+  console.log(`Longitud hex: ${lengthHex} (esperado: 00A9)`);
   console.log(`Trama final: ${lengthHex + frameWithSecurity}`);
   console.log(`================================\n`);
 

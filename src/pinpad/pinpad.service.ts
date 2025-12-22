@@ -10,15 +10,84 @@ import {
 } from "./utils/funtions";
 
 /**
- * Inicializa el PinPad con configuración básica
- * Trama tipo "CB" - Configuración Básica
- * Nota: La trama CP requiere estructura específica. Usar CB como alternativa.
+ * Inicializa el PinPad con configuración de red (CP)
+ * Trama tipo "CP" - Configuración Pinpad
+ * Permite configurar IP, Máscara, Gateway y Puerto de escucha del PinPad
  */
 export const initPinpad = async (req: Request, res: Response) => {
   try {
     // Obtener configuración actual
     const config = getPinpadConfig();
 
+    // Obtener parámetros del body o usar valores de la configuración/defaults
+    const {
+      ip = config.network?.ip || "0.0.0.0",  // 0.0.0.0 para DHCP según documentación
+      mask = config.network?.mask || "255.255.255.0",
+      gateway = config.network?.gateway || "192.168.1.1",
+      puertoEscucha = ""  // Puerto de escucha opcional, se pasa en el body
+    } = req.body;
+
+    console.log("🔧 Inicializando PinPad con configuración de red (CP)...");
+    console.log(`📍 IP: ${ip}`);
+    console.log(`📍 Máscara: ${mask}`);
+    console.log(`📍 Gateway: ${gateway}`);
+    console.log(`📍 Puerto Escucha: ${puertoEscucha || "(no especificado)"}`);
+
+    // Construir la trama de configuración CP
+    const frame = buildConfigFrame(ip, mask, gateway, puertoEscucha);
+
+    console.log("📤 Enviando trama de configuración al PinPad...");
+    console.log("📋 Trama:", frame);
+
+    // Enviar al PinPad
+    const response = await sendToPinPad(frame);
+    
+    // Parsear la respuesta
+    const parsedResponse = parseConfigResponse(response);
+
+    console.log("📥 Respuesta del PinPad:", parsedResponse);
+
+    if (parsedResponse.success) {
+      res.json({
+        success: true,
+        message: "PinPad configurado correctamente (Configuración de Red)",
+        data: {
+          tipoTrama: "CP",
+          configuracion: {
+            ip,
+            mask,
+            gateway,
+            puertoEscucha: puertoEscucha || "no especificado"
+          },
+          response: parsedResponse.data,
+        },
+        rawResponse: response,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Error al configurar PinPad",
+        error: parsedResponse.message,
+        data: parsedResponse.data,
+        rawResponse: response,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error al inicializar PinPad:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error al inicializar el PinPad",
+      details: error instanceof Error ? error.message : "Error desconocido",
+    });
+  }
+};
+
+/**
+ * Inicializa el PinPad con configuración básica (CB)
+ * Trama tipo "CB" - Configuración Básica (alternativa simple)
+ */
+export const initPinpadBasic = async (req: Request, res: Response) => {
+  try {
     console.log("🔧 Inicializando PinPad con configuración básica (CB)...");
 
     // Construir la trama de configuración básica (CB)
@@ -55,7 +124,7 @@ export const initPinpad = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error("❌ Error al inicializar PinPad:", error);
+    console.error("❌ Error al inicializar PinPad (básico):", error);
     res.status(500).json({
       success: false,
       error: "Error al inicializar el PinPad",
