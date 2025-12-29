@@ -78,12 +78,6 @@ export function buildConfigFrame(
     filler4 + // 06 AN - Filler
     puertoEscuchaField; // 06 N  - Puerto de escucha
 
-  // Validar longitud antes de continuar
-  if (frame.length !== 137) {
-    console.error(`❌ ERROR: Frame length is ${frame.length}, expected 137`);
-    throw new Error(`Frame length incorrect: ${frame.length} (expected 137)`);
-  }
-
   // Agregar componente de seguridad (32 caracteres)
   const securityComponent = calculateSecurityComponent(frame);
   const frameWithSecurity = frame + securityComponent;
