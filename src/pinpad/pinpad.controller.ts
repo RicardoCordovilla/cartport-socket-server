@@ -11,7 +11,7 @@ import {
 /**
  * Construye la trama de configuración del PinPad (CP)
  * Según documentación Datafast - Especificaciones PinPad Fastrack 1.6
- * 
+ *
  * Estructura de la trama CP (169 caracteres sin seguridad):
  * - Tipo de mensaje: 02 AN - "CP"
  * - Dirección IP: 15 AN - IP local del pinpad
@@ -26,7 +26,7 @@ import {
  * - IP Host alterna Red 2: 15 AN
  * - Puerto Host alterno Red 2: 06 AN
  * - Puerto de escucha: 06 N
- * 
+ *
  * Total: 2+15+15+15+(15+6)*4+6 = 2+45+84+6 = 137 caracteres
  * Pero el ejemplo del PDF muestra 00A9 = 169, entonces hay 32 más (el security)
  * 169 - 32 = 137 caracteres sin seguridad
@@ -38,44 +38,51 @@ export function buildConfigFrame(
   puertoEscucha?: string
 ): string {
   const tipo = "CP";
-  
+
   // Campos principales (15 caracteres cada uno, justificados con blancos a la derecha)
-  const direccionIP = ip.substring(0, 15).padEnd(15, " ");
-  const mascara = mask.substring(0, 15).padEnd(15, " ");
-  const gatewayField = gateway.substring(0, 15).padEnd(15, " ");
-  
-  // Campos de Host Red 1 - NO MODIFICABLES POR EL COMERCIO (enviar blancos)
-  const ipHostPrincipalRed1 = " ".repeat(15);
-  const puertoHostPrincipalRed1 = " ".repeat(6);
-  const ipHostAlternaRed1 = " ".repeat(15);
-  const puertoHostAlternoRed1 = " ".repeat(6);
-  
-  // Campos de Host Red 2 - NO MODIFICABLES POR EL COMERCIO (enviar blancos)
-  const ipHostPrincipalRed2 = " ".repeat(15);
-  const puertoHostRed2 = " ".repeat(6);
-  const ipHostAlternaRed2 = " ".repeat(15);
-  const puertoHostAlternoRed2 = " ".repeat(6);
-  
-  // Puerto de escucha (6 N - ceros a la izquierda, espacios si no aplica)
-  const puertoEscuchaField = puertoEscucha 
-    ? puertoEscucha.padStart(6, "0") 
+  const direccionIP = ip.padEnd(15, " ");
+  const mascara = mask.padEnd(15, " ");
+  const gatewayField = gateway.padEnd(15, " ");
+
+  // Campos de Host Red 1 - Enviar blancos según documentación
+  // "Si no se desea realizar cambios todos los datos de Host deben ir con espacios"
+  const ipHostPrincipalRed1 = " ".repeat(15); // 15 AN - IP Host principal
+  const puertoHostPrincipalRed1 = " ".repeat(6); // 06 AN - Puerto TCP Host principal
+  const ipHostAlternaRed1 = " ".repeat(15); // 15 AN - IP Host alterna
+  const puertoHostAlternoRed1 = " ".repeat(6); // 06 AN - Puerto TCP Host alterno
+
+  // Fillers (según página 11 del PDF)
+  const filler1 = " ".repeat(15); // 15 AN - Filler
+  const filler2 = " ".repeat(6); // 06 AN - Filler
+  const filler3 = " ".repeat(15); // 15 AN - Filler
+  const filler4 = " ".repeat(6); // 06 AN - Filler
+
+  // Puerto de escucha (6 N - justificado con ceros a la izquierda, espacios si no aplica)
+  const puertoEscuchaField = puertoEscucha
+    ? puertoEscucha.padStart(6, "0")
     : " ".repeat(6);
 
-  // Construir la trama en el orden exacto (137 caracteres)
+  // Construir la trama en el orden EXACTO del PDF
   const frame =
-    tipo +                      // 02 - CP
-    direccionIP +               // 15 - IP local
-    mascara +                   // 15 - Máscara
-    gatewayField +              // 15 - Gateway
-    ipHostPrincipalRed1 +       // 15 - IP Host principal Red 1
-    puertoHostPrincipalRed1 +   // 06 - Puerto Host principal Red 1
-    ipHostAlternaRed1 +         // 15 - IP Host alterna Red 1
-    puertoHostAlternoRed1 +     // 06 - Puerto Host alterno Red 1
-    ipHostPrincipalRed2 +       // 15 - IP Host principal Red 2
-    puertoHostRed2 +            // 06 - Puerto Host Red 2
-    ipHostAlternaRed2 +         // 15 - IP Host alterna Red 2
-    puertoHostAlternoRed2 +     // 06 - Puerto Host alterno Red 2
-    puertoEscuchaField;         // 06 - Puerto de escucha
+    tipo + // 02 AN - CP
+    direccionIP + // 15 AN - Dirección IP
+    mascara + // 15 AN - Máscara
+    gatewayField + // 15 AN - Gateway
+    ipHostPrincipalRed1 + // 15 AN - IP Host principal Red 1 (blancos)
+    puertoHostPrincipalRed1 + // 06 AN - Puerto TCP Host principal (blancos)
+    ipHostAlternaRed1 + // 15 AN - IP Host alterna Red 1 (blancos)
+    puertoHostAlternoRed1 + // 06 AN - Puerto TCP Host alterno (blancos)
+    filler1 + // 15 AN - Filler
+    filler2 + // 06 AN - Filler
+    filler3 + // 15 AN - Filler
+    filler4 + // 06 AN - Filler
+    puertoEscuchaField; // 06 N  - Puerto de escucha
+
+  // Validar longitud antes de continuar
+  if (frame.length !== 137) {
+    console.error(`❌ ERROR: Frame length is ${frame.length}, expected 137`);
+    throw new Error(`Frame length incorrect: ${frame.length} (expected 137)`);
+  }
 
   // Agregar componente de seguridad (32 caracteres)
   const securityComponent = calculateSecurityComponent(frame);
@@ -88,21 +95,43 @@ export function buildConfigFrame(
     .toUpperCase();
 
   console.log(`\n=== DEBUG CONFIG FRAME (CP) ===`);
-  console.log(`Tipo: ${tipo}`);
-  console.log(`Dirección IP: '${direccionIP}' (${direccionIP.length} chars)`);
-  console.log(`Máscara: '${mascara}' (${mascara.length} chars)`);
-  console.log(`Gateway: '${gatewayField}' (${gatewayField.length} chars)`);
-  console.log(`Puerto Escucha: '${puertoEscuchaField}' (${puertoEscuchaField.length} chars)`);
-  console.log(`Frame sin seguridad: ${frame.length} chars (esperado: 137)`);
-  console.log(`Security component: ${securityComponent}`);
-  console.log(`Frame completo: ${frameWithSecurity.length} chars (esperado: 169)`);
+  console.log(`Tipo: "${tipo}" (${tipo.length} chars)`);
+  console.log(`Dirección IP: "${direccionIP}" (${direccionIP.length} chars)`);
+  console.log(`Máscara: "${mascara}" (${mascara.length} chars)`);
+  console.log(`Gateway: "${gatewayField}" (${gatewayField.length} chars)`);
+  console.log(
+    `IP Host Principal: "${ipHostPrincipalRed1}" (${ipHostPrincipalRed1.length} chars)`
+  );
+  console.log(
+    `Puerto Host Principal: "${puertoHostPrincipalRed1}" (${puertoHostPrincipalRed1.length} chars)`
+  );
+  console.log(
+    `IP Host Alterna: "${ipHostAlternaRed1}" (${ipHostAlternaRed1.length} chars)`
+  );
+  console.log(
+    `Puerto Host Alterno: "${puertoHostAlternoRed1}" (${puertoHostAlternoRed1.length} chars)`
+  );
+  console.log(`Filler 1: "${filler1}" (${filler1.length} chars)`);
+  console.log(`Filler 2: "${filler2}" (${filler2.length} chars)`);
+  console.log(`Filler 3: "${filler3}" (${filler3.length} chars)`);
+  console.log(`Filler 4: "${filler4}" (${filler4.length} chars)`);
+  console.log(
+    `Puerto Escucha: "${puertoEscuchaField}" (${puertoEscuchaField.length} chars)`
+  );
+  console.log(`\nFrame sin seguridad: ${frame.length} chars (esperado: 137)`);
+  console.log(
+    `Security component: ${securityComponent} (${securityComponent.length} chars)`
+  );
+  console.log(
+    `Frame completo: ${frameWithSecurity.length} chars (esperado: 169)`
+  );
   console.log(`Longitud hex: ${lengthHex} (esperado: 00A9)`);
-  console.log(`Trama final: ${lengthHex + frameWithSecurity}`);
+  console.log(`\nTrama final completa:`);
+  console.log(`${lengthHex + frameWithSecurity}`);
   console.log(`================================\n`);
 
   return lengthHex + frameWithSecurity;
 }
-
 /**
  * Construye la trama de proceso de control
  */
@@ -159,6 +188,7 @@ export function buildControlFrame(params: {
     .toString(16)
     .padStart(4, "0")
     .toUpperCase();
+
   return lengthHex + frameWithSecurity;
 }
 
@@ -211,25 +241,28 @@ export function buildReadCardFrame(transactionData?: {
 
   // Si se proporcionan datos de transacción, almacenarlos en memoria
   if (transactionData) {
-    transactionId = transactionMemoryService.almacenarTransaccion(transactionData);
-    console.log(`💾 Datos de transacción almacenados para lectura de tarjeta: ${transactionId}`);
+    transactionId =
+      transactionMemoryService.almacenarTransaccion(transactionData);
+    console.log(
+      `💾 Datos de transacción almacenados para lectura de tarjeta: ${transactionId}`
+    );
   }
 
   console.log(`\n=== DEBUG LECTURA TARJETA ===`);
   console.log(`Frame: ${frame}`);
   console.log(`Security: ${securityComponent}`);
   console.log(`Total: ${frameWithSecurity.length} chars`);
-  console.log(`Transaction ID: ${transactionId || 'No almacenado'}`);
+  console.log(`Transaction ID: ${transactionId || "No almacenado"}`);
   console.log(`=============================\n`);
 
   const lengthHex = frameWithSecurity.length
     .toString(16)
     .padStart(4, "0")
     .toUpperCase();
-  
-  return { 
-    frame: lengthHex + frameWithSecurity, 
-    transactionId 
+
+  return {
+    frame: lengthHex + frameWithSecurity,
+    transactionId,
   };
 }
 
@@ -367,9 +400,9 @@ export function buildPaymentFrame(params: {
     .padStart(4, "0")
     .toUpperCase();
 
-  return { 
-    frame: lengthHex + frameWithSecurity, 
-    transactionId 
+  return {
+    frame: lengthHex + frameWithSecurity,
+    transactionId,
   };
 }
 
