@@ -46,7 +46,7 @@ export function buildConfigFrame(
 
   // Campos de Host Red 1 - Enviar blancos según documentación
   // "Si no se desea realizar cambios todos los datos de Host deben ir con espacios"
-  const ipHostPrincipalRed1 = " ".repeat(15); // 15 AN - IP Host principal
+  const ipHostPrincipalRed1 = " ".repeat(6); // 15 AN - IP Host principal
   const puertoHostPrincipalRed1 = " ".repeat(6); // 06 AN - Puerto TCP Host principal
   const ipHostAlternaRed1 = " ".repeat(15); // 15 AN - IP Host alterna
   const puertoHostAlternoRed1 = " ".repeat(6); // 06 AN - Puerto TCP Host alterno
@@ -68,7 +68,7 @@ export function buildConfigFrame(
     direccionIP + // 15 AN - Dirección IP
     mascara + // 15 AN - Máscara
     gatewayField + // 15 AN - Gateway
-    ipHostPrincipalRed1 + // 15 AN - IP Host principal Red 1 (blancos)
+    ipHostPrincipalRed1 + // 06 AN - IP Host principal Red 1 (blancos)
     puertoHostPrincipalRed1 + // 06 AN - Puerto TCP Host principal (blancos)
     ipHostAlternaRed1 + // 15 AN - IP Host alterna Red 1 (blancos)
     puertoHostAlternoRed1 + // 06 AN - Puerto TCP Host alterno (blancos)
